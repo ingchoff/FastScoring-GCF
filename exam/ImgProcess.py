@@ -3,7 +3,6 @@ import numpy as np
 from imutils import contours
 import cv2
 
-
 # input question_no to return first index of choice each of questions
 def choice_to_bubble(choice):
     column = (3 if choice > 75 else
@@ -24,17 +23,23 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys):
             continue
         if bubble[0] > chosen_choice[0]:
             chosen_choice = bubble
-    draw_answer(questions_no, subject_img, answer_keys, answer_choice.index(chosen_choice) + 1, answer_choice)
-    return answer_choice.index(chosen_choice)
+    correct = draw_answer(questions_no, subject_img, answer_keys, answer_choice.index(chosen_choice) + 1, answer_choice)
+    return {
+        'correct_choice': answer_choice.index(chosen_choice) + 1,
+        'correct': correct
+    }
 
 
 # draw choices with correcr answer each questions
 def draw_answer(question_no, img, keys, pos, list_answer_choice):
-    for i, correct_ans in keys.items():
-        if correct_ans == pos and i == question_no:
+    correct = False
+    for i, correct_ans in sorted(keys.items()):
+        if correct_ans == pos and int(i) == question_no:
             cv2.drawContours(img, [list_answer_choice[pos-1][2]], -1, (0, 255, 0), 3)
-        elif correct_ans != pos and i == question_no:
+            correct = True
+        elif correct_ans != pos and int(i) == question_no:
             cv2.drawContours(img, [list_answer_choice[correct_ans-1][2]], -1, (255, 0, 0), 3)
+    return correct
 
 
 def detect_circle(img_gray, num_choices):
@@ -192,7 +197,7 @@ def mask_choices_bubbled(choice_contours, bound_img):
     return list_bubbled
 
 
-def main_process(form_img, subject_img, form_std_img, std_img):
+def main_process(form_img, subject_img, form_std_img, std_img, quiz):
     image = cv2.imread(form_img)
     std_form = cv2.imread(form_std_img)
     subject = subject_img
@@ -221,13 +226,13 @@ def main_process(form_img, subject_img, form_std_img, std_img):
     list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg)
 
     # loop for calculate score
-    keys = {1: 3, 2: 4, 3: 3, 4: 2, 5: 4, 6: 1, 7: 4, 8: 3,
-            9: 3, 10: 4, 11: 3, 12: 2, 13: 4, 14: 2, 15: 4, 16: 3,
-            17: 3, 18: 4, 19: 3, 20: 2, 21: 4, 22: 1, 23: 4, 24: 3,
-            25: 3, 26: 1, 27: 1, 28: 3, 29: 4, 30: 1}
-    for i in range(1, 101):
-        calulate_score(i, list_choices_bubbled, subject, keys) + 1
+    keys = quiz['solve']
+    dict_result = {}
+    for i in range(1, quiz['amount']+1):
+        result = calulate_score(i, list_choices_bubbled, subject, keys)
+        dict_result[str(i)] = result
     return {
         'std_id': std_id,
-        'result_img': subject
+        'result_img': subject,
+        'result': dict_result
     }
