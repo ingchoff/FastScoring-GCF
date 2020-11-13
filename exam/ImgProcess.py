@@ -24,22 +24,31 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys):
         if bubble[0] > chosen_choice[0]:
             chosen_choice = bubble
     correct = draw_answer(questions_no, subject_img, answer_keys, answer_choice.index(chosen_choice) + 1, answer_choice)
+    print(correct)
     return {
-        'correct_choice': answer_choice.index(chosen_choice) + 1,
-        'correct': correct
+        'user_choice': answer_choice.index(chosen_choice) + 1,
+        'correct': correct['is_correct'],
+        'correct_choice': correct['ans_choice']
     }
 
 
 # draw choices with correcr answer each questions
 def draw_answer(question_no, img, keys, pos, list_answer_choice):
-    correct = False
+    is_correct = False
+    choice = 0
     for i, correct_ans in sorted(keys.items()):
         if correct_ans == pos and int(i) == question_no:
             cv2.drawContours(img, [list_answer_choice[pos-1][2]], -1, (0, 255, 0), 3)
-            correct = True
+            is_correct = True
+            choice = correct_ans
         elif correct_ans != pos and int(i) == question_no:
             cv2.drawContours(img, [list_answer_choice[correct_ans-1][2]], -1, (255, 0, 0), 3)
-    return correct
+            is_correct = False
+            choice = correct_ans
+    return {
+        'is_correct': is_correct,
+        'ans_choice': choice
+    }
 
 
 def detect_circle(img_gray, num_choices):
