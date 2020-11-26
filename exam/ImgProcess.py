@@ -12,7 +12,7 @@ def choice_to_bubble(choice, amount, col):
               2 if choice > final_question_col * 2 else
               1 if choice > final_question_col else
               0)
-    return (choice - (final_question_col * column + 1)) * 25 + (5 * column + 1)
+    return (choice - (final_question_col * column + 1)) * (5*col) + (5 * column + 1)
 
 
 # check to index of bubble choice each questions
