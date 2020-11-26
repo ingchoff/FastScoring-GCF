@@ -12,13 +12,13 @@ def choice_to_bubble(choice, amount, col):
               2 if choice > final_question_col * 2 else
               1 if choice > final_question_col else
               0)
-    return (choice - (final_question_col * column + 1)) * 25 + (5 * column + 1)
+    return (choice - (final_question_col * column + 1)) * (5*col) + (5 * column + 1)
 
 
 # check to index of bubble choice each questions
-def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, col):
+def calulate_score(questions_no, answer_sheet, subject_img, amount, col):
     first_bubble = choice_to_bubble(questions_no, amount, col)
-    answer_choice = list(filter(lambda bubbles: first_bubble + 4 >= bubbles[1] >= first_bubble, answersheet))
+    answer_choice = list(filter(lambda bubbles: first_bubble + 4 >= bubbles[1] >= first_bubble, answer_sheet))
     chosen_choice = None
     for bubble in answer_choice:
         if not chosen_choice:
@@ -26,32 +26,16 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
             continue
         if bubble[0] > chosen_choice[0]:
             chosen_choice = bubble
-    correct = draw_answer(questions_no, subject_img, answer_keys, answer_choice.index(chosen_choice) + 1, answer_choice)
-    print(correct)
+    position_chosen = answer_choice.index(chosen_choice) + 1
+    draw_answer(subject_img, position_chosen, answer_choice)
     return {
-        'user_choice': answer_choice.index(chosen_choice) + 1,
-        'correct': correct['is_correct'],
-        'correct_choice': correct['ans_choice']
+        'position_solve': position_chosen
     }
 
 
-# draw choices with correcr answer each questions
-def draw_answer(question_no, img, keys, pos, list_answer_choice):
-    is_correct = False
-    choice = 0
-    for i, correct_ans in sorted(keys.items()):
-        if correct_ans == pos and int(i) == question_no:
-            cv2.drawContours(img, [list_answer_choice[pos-1][2]], -1, (0, 255, 0), 3)
-            is_correct = True
-            choice = correct_ans
-        elif correct_ans != pos and int(i) == question_no:
-            cv2.drawContours(img, [list_answer_choice[correct_ans-1][2]], -1, (255, 0, 0), 3)
-            is_correct = False
-            choice = correct_ans
-    return {
-        'is_correct': is_correct,
-        'ans_choice': choice
-    }
+# draw choices with correct answer each questions
+def draw_answer(img, pos, list_answer_choice):
+    cv2.drawContours(img, [list_answer_choice[pos - 1][2]], -1, (0, 255, 0), 3)
 
 
 def detect_circle(img_gray, num_choices):
@@ -199,7 +183,6 @@ def mask_choices_bubbled(choice_contours, bound_img, col):
             # count the number of non-zero pixels in the
             # bubble area
             mask = cv2.bitwise_or(bound_img, bound_img, mask=mask)
-            # cv2.imwrite('Choices/Case4-onet/ex'+str(i + j + 1)+'.jpg', mask)
             total = cv2.countNonZero(mask)
             # if the current total has a larger number of total
             # non-zero pixels, then we are examining the currently
@@ -209,42 +192,24 @@ def mask_choices_bubbled(choice_contours, bound_img, col):
     return list_bubbled
 
 
-def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amount):
+def main_process(form_img, subject_img, quiz, amount_choices, column):
     image = cv2.imread(form_img)
-    std_form = cv2.imread(form_std_img)
     subject = subject_img
-    std_image = std_img
-    std_form_gray = cv2.cvtColor(std_form, cv2.COLOR_BGR2GRAY)
-    stdCnts = detect_circle(std_form_gray, 80)
-    new_std_img = subtract_img(stdCnts, std_image, std_form)
-    boundStdImg = cv2.drawContours(new_std_img, stdCnts, -1, (255, 255, 255), 1)
-    circleStd = find_circle_contour(boundStdImg)
-    list_std_bubbled = mask_std(circleStd, boundStdImg)
-    list_std_id = find_std_id(list_std_bubbled)
-    std_id = ''.join(map(str, list_std_id))
-    print(std_id)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    questionCnts = detect_circle(gray, amount*5)
-    # cv2.imwrite('Choices/Case6/1form.jpg', gray)
+    questionCnts = detect_circle(gray, amount_choices*5)
     new_subject_image = subtract_img(questionCnts, subject, image)
     boundImg = cv2.drawContours(new_subject_image.copy(), questionCnts, -1, (255, 255, 255), 1)
-    # cv2.imshow('bounding-box1', boundImg)
-    # cv2.imwrite('Choices/Case6/5bounding-box1.jpg', boundImg)
     choicesCnts = find_circle_contour(boundImg)
     new_sub_bgr = cv2.cvtColor(new_subject_image, cv2.COLOR_GRAY2BGR)
-    bound_newsub = cv2.drawContours(new_sub_bgr, choicesCnts, -1, (0, 0, 255), 2)
-    # cv2.imshow('detect_choices_circle', bound_newsub)
-    # cv2.imwrite('Choices/Case6/6bounding-box2.jpg', bound_newsub)
+    cv2.drawContours(new_sub_bgr, choicesCnts, -1, (0, 0, 255), 2)
     list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg, column)
 
     # loop for calculate score
-    keys = quiz['solve']
     dict_result = {}
     for i in range(1, quiz['amount']+1):
-        result = calulate_score(i, list_choices_bubbled, subject, keys, amount, column)
-        dict_result[str(i)] = result
+        result = calulate_score(i, list_choices_bubbled, subject, amount_choices, column)
+        dict_result[str(i)] = result['position_solve']
     return {
-        'std_id': std_id,
-        'result_img': subject,
-        'result': dict_result
+        'result_solve': dict_result,
+        'img_solve': subject
     }

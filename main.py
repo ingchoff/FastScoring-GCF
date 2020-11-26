@@ -7,6 +7,7 @@ from PIL import Image
 import cv2
 from exam import ImgProcess, Sift
 from form import CheckForm
+from quiz import FindAnswer
 
 gcs = storage.Client()
 bucket = gcs.get_bucket(os.environ['CLOUD_STORAGE_BUCKET'])
@@ -28,18 +29,19 @@ def image_process(event, context):
         exam_ref = db.collection('exams').document(list_filename_exam[0])
         exam_snapshot = exam_ref.get()
         data_exam = exam_snapshot.to_dict()
-        form_snapshot = data_exam['form'].get()
-        data_form = form_snapshot.to_dict()
         quiz_snapshot = data_exam['quiz'].get()
         data_quiz = quiz_snapshot.to_dict()
-        list_filename_form = data_form['path'].split('/')
+        form_snapshot = data_quiz['form'].get()
+        data_form = form_snapshot.to_dict()
+        list_form_path = data_form['answer_sheet_path'].split('/')
+        list_form_std = data_form['student_path'].split('/')
         # set tmp path for download images
         subject_tmp_path = os.path.join(tempfile.gettempdir(), list_folder[3])
-        form_tmp_path = os.path.join(tempfile.gettempdir(), list_filename_form[2])
-        formstd_tmp_path = os.path.join(tempfile.gettempdir(), 'formStd.jpg')
+        form_tmp_path = os.path.join(tempfile.gettempdir(), list_form_path[3])
+        formstd_tmp_path = os.path.join(tempfile.gettempdir(), list_form_std[3])
         # set blob destination file to download file
-        form_blob = bucket.blob(data_form['path'])
-        form_std_blob = bucket.blob('form/' + list_folder[1] + '/formStd.jpg')
+        form_blob = bucket.blob(list_form_path[1] + '/' + list_form_path[2] + '/' + list_form_path[3])
+        form_std_blob = bucket.blob('forms/' + list_folder[1] + '/' + list_form_std[3])
         subject_blob = bucket.blob(event['name'])
         form_blob.download_to_filename(form_tmp_path)
         subject_blob.download_to_filename(subject_tmp_path)
@@ -53,7 +55,7 @@ def image_process(event, context):
             'status': 'scoring'
         }, merge=True)
         result = ImgProcess.main_process(form_tmp_path, img_aligned, formstd_tmp_path, imgstd_aligned,
-                                         data_quiz)
+                                         data_quiz, data_form['column'], data_form['amount'])
         result_img = Image.fromarray(result['result_img'])
         result_img.save(os.path.join(tempfile.gettempdir(), 'result.jpg'))
         result_blob = bucket.blob('result/' + list_folder[1] + '/result_' + list_folder[3])
@@ -79,8 +81,15 @@ def image_process(event, context):
         type_form = list_filename[1]
         file_name = list_filename[1]
         if form_id != "analysed":
-            print("{}".format('start checking'))
             check_form(list_folder, form_id, type_form, file_name)
+    if list_folder[0] == "quizzes":
+        list_filename = list_folder[2].split('_')
+        print('{}'.format(list_filename[0]))
+        quiz_id = list_filename[0]
+        quiz_type = list_filename[1]
+        file_name = list_filename[1]
+        if quiz_id != "analysed":
+            find_solve(list_folder, quiz_id, quiz_type, file_name)
 
 
 def check_form(list_folder, fid, form_type, filename):
@@ -139,3 +148,48 @@ def check_form(list_folder, fid, form_type, filename):
                 'error_stu_msg': 'Not Compatible',
                 'stu_status': 'error'
             }, merge=True)
+        os.remove(form_tmp_path)
+
+
+def find_solve(list_folder, qid, quiz_type, filename):
+    # set up firestore
+    quiz_ref = db.collection('quizzes').document(qid)
+    snapshot_quiz = quiz_ref.get()
+    data_quiz = snapshot_quiz.to_dict()
+    snapshot_form = data_quiz['form'].get()
+    data_form = snapshot_form.to_dict()
+    # set tmp path for download images
+    list_form_path = data_form['answer_sheet_path'].split('/')
+    solve_tmp_path = os.path.join(tempfile.gettempdir(), filename)
+    form_tmp_path = os.path.join(tempfile.gettempdir(), list_form_path[3])
+    # set blob destination file to download file
+    form_blob = bucket.blob(list_form_path[1] + '/' + list_form_path[2] + '/' + list_form_path[3])
+    form_blob.download_to_filename(form_tmp_path)
+    solve_blob = bucket.blob(list_folder[0] + '/' + list_folder[1] + '/' + list_folder[2])
+    solve_blob.download_to_filename(solve_tmp_path)
+    quiz_ref.set({
+        'solution_status': 'process',
+        'detail': 'aligning'
+    }, merge=True)
+    img_aligned = Sift.main_process(form_tmp_path, solve_tmp_path)
+    quiz_ref.set({
+        'solution_status': 'process',
+        'detail': 'analysing'
+    }, merge=True)
+    result_solve = FindAnswer.main_process(form_tmp_path, img_aligned, data_quiz, data_form['amount'], data_form['column'])
+    bound_img_rgb = cv2.cvtColor(result_solve['img_solve'], cv2.COLOR_BGR2RGB)
+    analysed_img = Image.fromarray(bound_img_rgb)
+    analysed_img.save(os.path.join(tempfile.gettempdir(), 'analysed_solve.jpg'))
+    analysed_blob = bucket.blob('quizzes/' + list_folder[1] + '/analysed_' + qid + '_' + filename)
+    analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed_solve.jpg'),
+                                       content_type='image/jpeg')
+    quiz_ref.set({
+        'solve': result_solve['result_solve'],
+        'solution_status': 'finish',
+        'analysed_solution_path': 'quizzes/' + list_folder[1] + '/analysed_' + qid + '_' + filename
+    }, merge=True)
+    quiz_ref.update({
+        'detail': firestore_v1.DELETE_FIELD
+    })
+    os.remove(form_tmp_path)
+    os.remove(solve_tmp_path)
