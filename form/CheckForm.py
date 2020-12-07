@@ -15,7 +15,7 @@ def find_contour_circle(form_img, num_choices):
         peri = cv2.arcLength(c, True)
         approx = cv2.approxPolyDP(c, 0.03 * peri, True)
         (x, y, w, h) = cv2.boundingRect(c)
-        if 15 <= w <= 200 and 15 <= h <= 200 \
+        if 15 <= w <= 50 and 15 <= h <= 50 \
                 and len(approx) != 3 and len(approx) != 4 and len(approx) != 5:
             list_circle.append(c)
     print(len(list_circle))

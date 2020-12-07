@@ -49,26 +49,34 @@ def image_process(event, context):
         exam_ref.set({
             'status': 'aligning'
         }, merge=True)
-        img_aligned = Sift.main_process(form_tmp_path, subject_tmp_path)
-        imgstd_aligned = Sift.main_process(formstd_tmp_path, subject_tmp_path)
-        exam_ref.set({
-            'status': 'scoring'
-        }, merge=True)
-        result = ImgProcess.main_process(form_tmp_path, img_aligned, formstd_tmp_path, imgstd_aligned,
-                                         data_quiz, data_form['column'], data_form['amount'])
-        result_img = Image.fromarray(result['result_img'])
-        result_img.save(os.path.join(tempfile.gettempdir(), 'result.jpg'))
-        result_blob = bucket.blob('result/' + list_folder[1] + '/result_' + list_folder[3])
-        exam_ref.set({
-            'status': 'uploading result'
-        }, merge=True)
-        result_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'result.jpg'), content_type='image/jpeg')
-        exam_ref.set({
-            'sid': result['std_id'],
-            'path_result': 'result/' + list_folder[1] + '/result_' + list_folder[3],
-            'status': 'done',
-            'result': result['result']
-        }, merge=True)
+        img_aligned = Sift.main_process(form_tmp_path, subject_tmp_path, 'answer')
+        imgstd_aligned = Sift.main_process(formstd_tmp_path, subject_tmp_path, 'std')
+        if 'aligned_img' in img_aligned and 'aligned_img' in imgstd_aligned:
+            exam_ref.set({
+                'status': 'scoring'
+            }, merge=True)
+            result = ImgProcess.main_process(form_tmp_path, img_aligned['aligned_img'], formstd_tmp_path,
+                                             imgstd_aligned['aligned_img'],
+                                             data_quiz, data_form['column'], data_form['amount'])
+            bound_img_rgb = cv2.cvtColor(result['result_img'], cv2.COLOR_BGR2RGB)
+            result_img = Image.fromarray(bound_img_rgb)
+            result_img.save(os.path.join(tempfile.gettempdir(), 'result.jpg'))
+            result_blob = bucket.blob('result/' + list_folder[1] + '/result_' + list_folder[3])
+            exam_ref.set({
+                'status': 'uploading result'
+            }, merge=True)
+            result_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'result.jpg'), content_type='image/jpeg')
+            exam_ref.set({
+                'sid': result['std_id'],
+                'path_result': 'result/' + list_folder[1] + '/result_' + list_folder[3],
+                'status': 'done',
+                'result': result['result']
+            }, merge=True)
+        else:
+            exam_ref.set({
+                'status': 'error',
+                'error_msg': img_aligned['error_msg']
+            }, merge=True)
         os.remove(form_tmp_path)
         os.remove(subject_tmp_path)
         os.remove(formstd_tmp_path)
@@ -171,25 +179,31 @@ def find_solve(list_folder, qid, quiz_type, filename):
         'solution_status': 'process',
         'detail': 'aligning'
     }, merge=True)
-    img_aligned = Sift.main_process(form_tmp_path, solve_tmp_path)
-    quiz_ref.set({
-        'solution_status': 'process',
-        'detail': 'analysing'
-    }, merge=True)
-    result_solve = FindAnswer.main_process(form_tmp_path, img_aligned, data_quiz, data_form['amount'], data_form['column'])
-    bound_img_rgb = cv2.cvtColor(result_solve['img_solve'], cv2.COLOR_BGR2RGB)
-    analysed_img = Image.fromarray(bound_img_rgb)
-    analysed_img.save(os.path.join(tempfile.gettempdir(), 'analysed_solve.jpg'))
-    analysed_blob = bucket.blob('quizzes/' + list_folder[1] + '/analysed_' + qid + '_' + filename)
-    analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed_solve.jpg'),
-                                       content_type='image/jpeg')
-    quiz_ref.set({
-        'solve': result_solve['result_solve'],
-        'solution_status': 'finish',
-        'analysed_solution_path': 'quizzes/' + list_folder[1] + '/analysed_' + qid + '_' + filename
-    }, merge=True)
-    quiz_ref.update({
-        'detail': firestore_v1.DELETE_FIELD
-    })
+    img_aligned = Sift.main_process(form_tmp_path, solve_tmp_path, 'answer')
+    if 'aligned_img' in img_aligned:
+        quiz_ref.set({
+            'solution_status': 'process',
+            'detail': 'analysing'
+        }, merge=True)
+        result_solve = FindAnswer.main_process(form_tmp_path, img_aligned['aligned_img'], data_quiz, data_form['amount'], data_form['column'])
+        bound_img_rgb = cv2.cvtColor(result_solve['img_solve'], cv2.COLOR_BGR2RGB)
+        analysed_img = Image.fromarray(bound_img_rgb)
+        analysed_img.save(os.path.join(tempfile.gettempdir(), 'analysed_solve.jpg'))
+        analysed_blob = bucket.blob('quizzes/' + list_folder[1] + '/analysed_' + qid + '_' + filename)
+        analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed_solve.jpg'),
+                                           content_type='image/jpeg')
+        quiz_ref.set({
+            'solve': result_solve['result_solve'],
+            'solution_status': 'finish',
+            'analysed_solution_path': 'quizzes/' + list_folder[1] + '/analysed_' + qid + '_' + filename
+        }, merge=True)
+        quiz_ref.update({
+            'detail': firestore_v1.DELETE_FIELD
+        })
+    else:
+        quiz_ref.set({
+            'solution_status': 'error',
+            'detail': img_aligned['error_msg']
+        }, merge=True)
     os.remove(form_tmp_path)
     os.remove(solve_tmp_path)

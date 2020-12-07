@@ -27,7 +27,6 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
         if bubble[0] > chosen_choice[0]:
             chosen_choice = bubble
     correct = draw_answer(questions_no, subject_img, answer_keys, answer_choice.index(chosen_choice) + 1, answer_choice)
-    print(correct)
     return {
         'user_choice': answer_choice.index(chosen_choice) + 1,
         'correct': correct['is_correct'],
@@ -45,7 +44,7 @@ def draw_answer(question_no, img, keys, pos, list_answer_choice):
             is_correct = True
             choice = correct_ans
         elif correct_ans != pos and int(i) == question_no:
-            cv2.drawContours(img, [list_answer_choice[correct_ans-1][2]], -1, (255, 0, 0), 3)
+            cv2.drawContours(img, [list_answer_choice[correct_ans-1][2]], -1, (0, 0, 255), 3)
             is_correct = False
             choice = correct_ans
     return {
@@ -73,7 +72,7 @@ def detect_circle(img_gray, num_choices):
         # in order to label the contour as a question, region
         # should be sufficiently wide, sufficiently tall, and
         # have an aspect ratio approximately equal to 1
-        if 15 <= w <= 500 and 15 <= h <= 500 \
+        if 15 <= w <= 50 and 15 <= h <= 50 \
                 and len(approx) != 3 and len(approx) != 4 and len(approx) != 5:
             questionCnts.append(c)
     print(len(questionCnts))
@@ -166,7 +165,7 @@ def find_circle_contour(bound_img):
         # in order to label the contour as a question, region
         # should be sufficiently wide, sufficiently tall, and
         # have an aspect ratio approximately equal to 1
-        if 10 <= w <= 500 and 10 <= h <= 500 \
+        if 10 <= w <= 50 and 10 <= h <= 50 \
                 and len(approx) != 3 and len(approx) != 4 and len(approx) != 5:
             circleCnts.append(c)
     print(len(circleCnts))
