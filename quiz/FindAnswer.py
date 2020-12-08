@@ -57,7 +57,7 @@ def detect_circle(img_gray, num_choices):
         # in order to label the contour as a question, region
         # should be sufficiently wide, sufficiently tall, and
         # have an aspect ratio approximately equal to 1
-        if 15 <= w <= 500 and 15 <= h <= 500 \
+        if 15 <= w <= 50 and 15 <= h <= 50 \
                 and len(approx) != 3 and len(approx) != 4 and len(approx) != 5:
             questionCnts.append(c)
     print(len(questionCnts))
@@ -71,7 +71,6 @@ def detect_circle(img_gray, num_choices):
 def mask_std(std_cnts, img_std_id):
     stdCnts = contours.sort_contours(std_cnts, method="top-to-bottom")[0]
     cv2.drawContours(img_std_id, stdCnts, -1, (0, 0, 255), 2)
-    # cv2.imshow('stdbounding', boundStd)
     list_bubbled = []
     for (q, i) in enumerate(np.arange(0, len(stdCnts), 8)):
         cnts = contours.sort_contours(stdCnts[i:i + 8])[0]
@@ -134,7 +133,7 @@ def subtract_img(list_question_cnts, subject_img, form_img):
     return new_sub
 
 
-def find_circle_contour(bound_img):
+def find_circle_contour(bound_img, num_choices):
     contour = cv2.findContours(bound_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contour = imutils.grab_contours(contour)
     contour = sorted(contour, key=cv2.contourArea, reverse=True)
@@ -150,12 +149,12 @@ def find_circle_contour(bound_img):
         # in order to label the contour as a question, region
         # should be sufficiently wide, sufficiently tall, and
         # have an aspect ratio approximately equal to 1
-        if 10 <= w <= 500 and 10 <= h <= 500 \
+        if 10 <= w <= 50 and 10 <= h <= 50 \
                 and len(approx) != 3 and len(approx) != 4 and len(approx) != 5:
             circleCnts.append(c)
     print(len(circleCnts))
-    if len(circleCnts) > 500:
-        skip = len(circleCnts) - 500
+    if len(circleCnts) > num_choices:
+        skip = len(circleCnts) - num_choices
         circleCnts = circleCnts[:-skip]
     print(len(circleCnts))
     return circleCnts
@@ -199,7 +198,7 @@ def main_process(form_img, subject_img, quiz, amount_choices, column):
     questionCnts = detect_circle(gray, amount_choices*5)
     new_subject_image = subtract_img(questionCnts, subject, image)
     boundImg = cv2.drawContours(new_subject_image.copy(), questionCnts, -1, (255, 255, 255), 1)
-    choicesCnts = find_circle_contour(boundImg)
+    choicesCnts = find_circle_contour(boundImg, amount_choices*5)
     new_sub_bgr = cv2.cvtColor(new_subject_image, cv2.COLOR_GRAY2BGR)
     cv2.drawContours(new_sub_bgr, choicesCnts, -1, (0, 0, 255), 2)
     list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg, column)

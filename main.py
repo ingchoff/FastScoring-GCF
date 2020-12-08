@@ -51,7 +51,7 @@ def image_process(event, context):
         }, merge=True)
         img_aligned = Sift.main_process(form_tmp_path, subject_tmp_path, 'answer')
         imgstd_aligned = Sift.main_process(formstd_tmp_path, subject_tmp_path, 'std')
-        if 'aligned_img' in img_aligned and 'aligned_img' in imgstd_aligned:
+        if not img_aligned['is_error'] and not imgstd_aligned['is_error']:
             exam_ref.set({
                 'status': 'scoring'
             }, merge=True)
@@ -72,6 +72,17 @@ def image_process(event, context):
                 'status': 'done',
                 'result': result['result']
             }, merge=True)
+            os.remove(os.path.join(tempfile.gettempdir(), 'result.jpg'))
+        elif not img_aligned['is_error'] and imgstd_aligned['is_error']:
+            exam_ref.set({
+                'status': 'error',
+                'error_msg': imgstd_aligned['error_msg']
+            }, merge=True)
+        elif img_aligned['is_error'] and not imgstd_aligned['is_error']:
+            exam_ref.set({
+                'status': 'error',
+                'error_msg': img_aligned['error_msg']
+            }, merge=True)
         else:
             exam_ref.set({
                 'status': 'error',
@@ -80,7 +91,6 @@ def image_process(event, context):
         os.remove(form_tmp_path)
         os.remove(subject_tmp_path)
         os.remove(formstd_tmp_path)
-        os.remove(os.path.join(tempfile.gettempdir(), 'result.jpg'))
         print('{}'.format('final'))
     if list_folder[0] == "forms":
         list_filename = list_folder[2].split('_')

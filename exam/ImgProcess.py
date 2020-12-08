@@ -135,21 +135,18 @@ def subtract_img(list_question_cnts, subject_img, form_img):
     blanked_img = np.zeros(form_img.shape, dtype="uint8")
     new_marker = cv2.drawContours(blanked_img, list_question_cnts, -1, (255, 255, 255), -1)
     new_marker_gray = cv2.cvtColor(new_marker, cv2.COLOR_BGR2GRAY)
-    # cv2.imwrite('Choices/Case6/2marker.jpg', new_marker_gray)
-    # cv2.imshow('new_marker_gray', new_marker_gray)
     subject_gray = cv2.cvtColor(subject_img, cv2.COLOR_BGR2GRAY)
     subject_gray_blurred = cv2.GaussianBlur(subject_gray, (5, 5), 0)
     th1 = cv2.adaptiveThreshold(subject_gray_blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 71,
                                 2 | cv2.THRESH_OTSU)
-    # cv2.imshow('thres_subject', th1)
-    # cv2.imwrite('Choices/Case6/3thres_subject.jpg', th1)
     new_sub = cv2.bitwise_and(new_marker_gray, th1)
-    # cv2.imshow('new_sub', new_sub)
-    # cv2.imwrite('Choices/Case6/4new_sub.jpg', new_sub)
-    return new_sub
+    return {
+        'new_sub': new_sub,
+        'new_marker_gray': new_marker_gray
+    }
 
 
-def find_circle_contour(bound_img):
+def find_circle_contour(bound_img, amount_choices):
     contour = cv2.findContours(bound_img, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
     contour = imutils.grab_contours(contour)
     contour = sorted(contour, key=cv2.contourArea, reverse=True)
@@ -161,7 +158,6 @@ def find_circle_contour(bound_img):
         peri = cv2.arcLength(c, True)
         approx = cv2.approxPolyDP(c, 0.03 * peri, True)
         (x, y, w, h) = cv2.boundingRect(c)
-        ar = w / float(h)
         # in order to label the contour as a question, region
         # should be sufficiently wide, sufficiently tall, and
         # have an aspect ratio approximately equal to 1
@@ -169,8 +165,8 @@ def find_circle_contour(bound_img):
                 and len(approx) != 3 and len(approx) != 4 and len(approx) != 5:
             circleCnts.append(c)
     print(len(circleCnts))
-    if len(circleCnts) > 500:
-        skip = len(circleCnts) - 500
+    if len(circleCnts) > amount_choices:
+        skip = len(circleCnts) - amount_choices
         circleCnts = circleCnts[:-skip]
     print(len(circleCnts))
     return circleCnts
@@ -198,7 +194,6 @@ def mask_choices_bubbled(choice_contours, bound_img, col):
             # count the number of non-zero pixels in the
             # bubble area
             mask = cv2.bitwise_or(bound_img, bound_img, mask=mask)
-            # cv2.imwrite('Choices/Case4-onet/ex'+str(i + j + 1)+'.jpg', mask)
             total = cv2.countNonZero(mask)
             # if the current total has a larger number of total
             # non-zero pixels, then we are examining the currently
@@ -217,23 +212,18 @@ def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amo
     stdCnts = detect_circle(std_form_gray, 80)
     new_std_img = subtract_img(stdCnts, std_image, std_form)
     boundStdImg = cv2.drawContours(new_std_img, stdCnts, -1, (255, 255, 255), 1)
-    circleStd = find_circle_contour(boundStdImg)
+    circleStd = find_circle_contour(boundStdImg, 80)
     list_std_bubbled = mask_std(circleStd, boundStdImg)
     list_std_id = find_std_id(list_std_bubbled)
     std_id = ''.join(map(str, list_std_id))
     print(std_id)
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     questionCnts = detect_circle(gray, amount*5)
-    # cv2.imwrite('Choices/Case6/1form.jpg', gray)
     new_subject_image = subtract_img(questionCnts, subject, image)
     boundImg = cv2.drawContours(new_subject_image.copy(), questionCnts, -1, (255, 255, 255), 1)
-    # cv2.imshow('bounding-box1', boundImg)
-    # cv2.imwrite('Choices/Case6/5bounding-box1.jpg', boundImg)
-    choicesCnts = find_circle_contour(boundImg)
+    choicesCnts = find_circle_contour(boundImg, amount*5)
     new_sub_bgr = cv2.cvtColor(new_subject_image, cv2.COLOR_GRAY2BGR)
     bound_newsub = cv2.drawContours(new_sub_bgr, choicesCnts, -1, (0, 0, 255), 2)
-    # cv2.imshow('detect_choices_circle', bound_newsub)
-    # cv2.imwrite('Choices/Case6/6bounding-box2.jpg', bound_newsub)
     list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg, column)
 
     # loop for calculate score

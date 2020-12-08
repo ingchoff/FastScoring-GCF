@@ -8,15 +8,15 @@ def alignImages(im1, im2, type_align):
     # Convert images to grayscale
     im1Gray = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
     im2Gray = cv2.cvtColor(im2, cv2.COLOR_BGR2GRAY)
+    im2blurred = cv2.GaussianBlur(im2Gray, (5, 5), 0)
     sift = cv2.SIFT_create()
     if type_align == 'answer':
-        im2blurred = cv2.GaussianBlur(im2Gray, (5, 5), 0)
         # Detect Sift features and compute descriptors.
         keypoints1, descriptors1 = sift.detectAndCompute(im1Gray, None)
         keypoints2, descriptors2 = sift.detectAndCompute(im2blurred, None)
     else:
         keypoints1, descriptors1 = sift.detectAndCompute(im1Gray, None)
-        keypoints2, descriptors2 = sift.detectAndCompute(im2Gray, None)
+        keypoints2, descriptors2 = sift.detectAndCompute(im2blurred, None)
     # Match features.
     # matcher = cv2.DescriptorMatcher_create(cv2.DESCRIPTOR_MATCHER_BRUTEFORCE_HAMMING)
     # matches = matcher.match(descriptors1, descriptors2, None)
@@ -48,11 +48,22 @@ def alignImages(im1, im2, type_align):
         # Use homography
         height, width, channels = im2.shape
         im1Reg = cv2.warpPerspective(im1, h, (width, height))
-        return {
-            'is_error': False,
-            'aligned_img': im1Reg,
-            'h': h
-        }
+        if len(good_matches) <= 10 and type_align == 'std':
+            return {
+                'is_error': True,
+                'error_msg': 'ไม่สามารถตรวจรหัสนศ.ได้ เพราะไม่สามารถ align รูปส่วนฝนรหัสนศ.ได้'
+            }
+        elif len(good_matches) <= 10 and type_align == 'answer':
+            return {
+                'is_error': True,
+                'error_msg': 'ไม่สามารถตรวจคำตอบได้ เพราะไม่สามารถ align รูปส่วนฝนคำตอบได้'
+            }
+        else:
+            return {
+                'is_error': False,
+                'aligned_img': im1Reg,
+                'h': h
+            }
     except cv2.error:
         return {
             'is_error': True,
@@ -72,10 +83,12 @@ def main_process(img_form, img_subject, type_align):
     result_aligned = alignImages(im, imReference, type_align)
     if result_aligned['is_error']:
         return {
-            'error_msg': result_aligned['error_msg']
+            'error_msg': result_aligned['error_msg'],
+            'is_error': True
         }
     else:
         print("Estimated homography : \n", result_aligned['h'])
         return {
-            'aligned_img': result_aligned['aligned_img']
+            'aligned_img': result_aligned['aligned_img'],
+            'is_error': False
         }
