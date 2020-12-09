@@ -90,7 +90,7 @@ def draw_answer(question_no, img, keys, pos, list_answer_choice, list_diff_bubbl
 
 def detect_circle(img_gray, num_choices):
     thresh = cv2.adaptiveThreshold(img_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                   cv2.THRESH_BINARY_INV, 71, 2 | cv2.THRESH_OTSU)
+                                   cv2.THRESH_BINARY_INV, 11, 2 | cv2.THRESH_OTSU)
     # cv2.imshow('adaptive', thresh)
     # หา contour ที่เป็น choices คำตอบทั้งหมด
     contour = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
@@ -120,8 +120,6 @@ def detect_circle(img_gray, num_choices):
 
 def mask_std(std_cnts, img_std_id):
     stdCnts = contours.sort_contours(std_cnts, method="top-to-bottom")[0]
-    cv2.drawContours(img_std_id, stdCnts, -1, (0, 0, 255), 2)
-    # cv2.imshow('stdbounding', boundStd)
     list_bubbled = []
     for (q, i) in enumerate(np.arange(0, len(stdCnts), 8)):
         cnts = contours.sort_contours(stdCnts[i:i + 8])[0]
@@ -145,24 +143,30 @@ def mask_std(std_cnts, img_std_id):
     return list_bubbled
 
 
-def find_std_id(list_bubbled):
+def find_std_id(list_bubbled, list_form):
     chosen_choice = 0
     list_id = []
-    id_pos = 0
+    id_pos = -1
+    total_c_form = 0
     for col in range(1, 9):
         col_choices_list = list(filter(lambda bubbles: bubbles[1] == col, list_bubbled))
-        # print(col_choices_list)
+        col_choices_form = list(filter(lambda bubbles: bubbles[1] == col, list_form))
+        for c_form in col_choices_form:
+            total_c_form += c_form[0]
+        avg_c = total_c_form / 10
         for pos, bubble in enumerate(col_choices_list):
             value = bubble[0]
-            if chosen_choice == 0:
+            diff = abs(avg_c - bubble[0])
+            if chosen_choice == -1:
                 chosen_choice = value
                 continue
-            if value > chosen_choice:
+            if value > chosen_choice and diff < 40:
                 chosen_choice = bubble[0]
                 id_pos = pos
         chosen_choice = 1
-        # print(id_pos)
-        list_id.append(id_pos)
+        total_c_form = 0
+        if id_pos != -1:
+            list_id.append(id_pos)
     return list_id
 
 
@@ -196,7 +200,7 @@ def find_circle_contour(bound_img, amount_choices):
         # in order to label the contour as a question, region
         # should be sufficiently wide, sufficiently tall, and
         # have an aspect ratio approximately equal to 1
-        if 10 <= w <= 50 and 10 <= h <= 50 \
+        if 15 <= w <= 50 and 15 <= h <= 50 \
                 and len(approx) != 3 and len(approx) != 4 and len(approx) != 5:
             circleCnts.append(c)
     print(len(circleCnts))
@@ -243,15 +247,24 @@ def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amo
     std_form = cv2.imread(form_std_img)
     subject = subject_img
     std_image = std_img
+    std_image_gray = cv2.cvtColor(std_image, cv2.COLOR_BGR2GRAY)
     std_form_gray = cv2.cvtColor(std_form, cv2.COLOR_BGR2GRAY)
     stdCnts = detect_circle(std_form_gray, 80)
-    new_std_img = subtract_img(stdCnts, std_image, std_form)
-    boundStdImg = cv2.drawContours(new_std_img['new_sub'], stdCnts, -1, (255, 255, 255), 1)
-    circleStd = find_circle_contour(boundStdImg, 80)
-    list_std_bubbled = mask_std(circleStd, boundStdImg)
-    list_std_id = find_std_id(list_std_bubbled)
-    std_id = ''.join(map(str, list_std_id))
-    print(std_id)
+    check_std_cnts = detect_circle(std_image_gray, 1000)
+    if len(check_std_cnts) >= 80:
+        new_std_img = subtract_img(stdCnts, std_image, std_form)
+        boundStdImg = cv2.drawContours(new_std_img['new_sub'], stdCnts, -1, (255, 255, 255), 1)
+        circleStd = find_circle_contour(boundStdImg, 80)
+        list_std_form = mask_std(stdCnts, new_std_img['new_marker_gray'])
+        list_std_bubbled = mask_std(circleStd, boundStdImg)
+        list_std_id = find_std_id(list_std_bubbled, list_std_form)
+        if len(list_std_id) == 8:
+            std_id = ''.join(map(str, list_std_id))
+            print(std_id)
+        else:
+            std_id = 'ไม่ได้ฝนรหัสนักศึกษา'
+    else:
+        std_id = 'ไม่สามารถตรวจรหัสนศ.ได้ เพราะไม่สามารถ align รูปส่วนฝนรหัสนศ.ได้'
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     questionCnts = detect_circle(gray, amount*5)
     new_subject_image = subtract_img(questionCnts, subject, image)

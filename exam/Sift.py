@@ -8,6 +8,7 @@ def alignImages(im1, im2, type_align):
     # Convert images to grayscale
     im1Gray = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
     im2Gray = cv2.cvtColor(im2, cv2.COLOR_BGR2GRAY)
+    im1blurred = cv2.GaussianBlur(im1Gray, (5, 5), 0)
     im2blurred = cv2.GaussianBlur(im2Gray, (5, 5), 0)
     sift = cv2.SIFT_create()
     if type_align == 'answer':
@@ -15,7 +16,7 @@ def alignImages(im1, im2, type_align):
         keypoints1, descriptors1 = sift.detectAndCompute(im1Gray, None)
         keypoints2, descriptors2 = sift.detectAndCompute(im2blurred, None)
     else:
-        keypoints1, descriptors1 = sift.detectAndCompute(im1Gray, None)
+        keypoints1, descriptors1 = sift.detectAndCompute(im1blurred, None)
         keypoints2, descriptors2 = sift.detectAndCompute(im2blurred, None)
     # Match features.
     # matcher = cv2.DescriptorMatcher_create(cv2.DESCRIPTOR_MATCHER_BRUTEFORCE_HAMMING)
