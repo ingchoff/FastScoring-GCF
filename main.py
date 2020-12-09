@@ -193,7 +193,8 @@ def find_solve(list_folder, qid, quiz_type, filename):
     if 'aligned_img' in img_aligned:
         quiz_ref.set({
             'solution_status': 'process',
-            'detail': 'analysing'
+            'detail': 'analysing',
+            'solve': {}
         }, merge=True)
         result_solve = FindAnswer.main_process(form_tmp_path, img_aligned['aligned_img'], data_quiz, data_form['amount'], data_form['column'])
         bound_img_rgb = cv2.cvtColor(result_solve['img_solve'], cv2.COLOR_BGR2RGB)
@@ -202,8 +203,10 @@ def find_solve(list_folder, qid, quiz_type, filename):
         analysed_blob = bucket.blob('quizzes/' + list_folder[1] + '/analysed_' + qid + '_' + filename)
         analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed_solve.jpg'),
                                            content_type='image/jpeg')
+        quiz_ref.update({
+            'solve': result_solve['result_solve']
+        })
         quiz_ref.set({
-            'solve': result_solve['result_solve'],
             'solution_status': 'finish',
             'analysed_solution_path': 'quizzes/' + list_folder[1] + '/analysed_' + qid + '_' + filename
         }, merge=True)

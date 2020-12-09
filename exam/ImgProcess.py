@@ -88,9 +88,13 @@ def draw_answer(question_no, img, keys, pos, list_answer_choice, list_diff_bubbl
     }
 
 
-def detect_circle(img_gray, num_choices):
+def detect_circle(img_gray, num_choices, type_img):
+    if type_img == 'std':
+        value = 11
+    else:
+        value = 71
     thresh = cv2.adaptiveThreshold(img_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
-                                   cv2.THRESH_BINARY_INV, 11, 2 | cv2.THRESH_OTSU)
+                                   cv2.THRESH_BINARY_INV, value, 2 | cv2.THRESH_OTSU)
     # cv2.imshow('adaptive', thresh)
     # หา contour ที่เป็น choices คำตอบทั้งหมด
     contour = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
@@ -249,8 +253,8 @@ def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amo
     std_image = std_img
     std_image_gray = cv2.cvtColor(std_image, cv2.COLOR_BGR2GRAY)
     std_form_gray = cv2.cvtColor(std_form, cv2.COLOR_BGR2GRAY)
-    stdCnts = detect_circle(std_form_gray, 80)
-    check_std_cnts = detect_circle(std_image_gray, 1000)
+    stdCnts = detect_circle(std_form_gray, 80, 'std')
+    check_std_cnts = detect_circle(std_image_gray, 1000, 'std')
     if len(check_std_cnts) >= 80:
         new_std_img = subtract_img(stdCnts, std_image, std_form)
         boundStdImg = cv2.drawContours(new_std_img['new_sub'], stdCnts, -1, (255, 255, 255), 1)
@@ -266,7 +270,7 @@ def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amo
     else:
         std_id = 'ไม่สามารถตรวจรหัสนศ.ได้ เพราะไม่สามารถ align รูปส่วนฝนรหัสนศ.ได้'
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    questionCnts = detect_circle(gray, amount*5)
+    questionCnts = detect_circle(gray, amount*5, 'answer')
     new_subject_image = subtract_img(questionCnts, subject, image)
     boundImg = cv2.drawContours(new_subject_image['new_sub'].copy(), questionCnts, -1, (255, 255, 255), 1)
     choicesCnts = find_circle_contour(boundImg, amount*5)

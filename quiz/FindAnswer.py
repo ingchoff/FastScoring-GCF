@@ -16,32 +16,52 @@ def choice_to_bubble(choice, amount, col):
 
 
 # check to index of bubble choice each questions
-def calulate_score(questions_no, answer_sheet, subject_img, amount, col):
+def calulate_score(questions_no, answer_sheet, subject_img, amount, col, dic_c_form):
     first_bubble = choice_to_bubble(questions_no, amount, col)
     answer_choice = list(filter(lambda bubbles: first_bubble + 4 >= bubbles[1] >= first_bubble, answer_sheet))
+    form_choice = list(filter(lambda bubbles: first_bubble + 4 >= bubbles[1] >= first_bubble, dic_c_form))
     chosen_choice = None
-    for bubble in answer_choice:
-        if not chosen_choice:
+    chosen_pos = 0
+    total_c_form = 0
+    count_bubble = 0
+    for i, c_form in enumerate(form_choice):
+        total_c_form += c_form[0]
+    avg = total_c_form / 5
+    for pos, bubble in enumerate(answer_choice):
+        diff = (abs(avg - bubble[0]))
+        if not chosen_choice and diff < 40:
             chosen_choice = bubble
+            chosen_pos = pos
+            count_bubble += 1
             continue
-        if bubble[0] > chosen_choice[0]:
+        if not chosen_choice and diff >= 40:
             chosen_choice = bubble
-    position_chosen = answer_choice.index(chosen_choice) + 1
-    draw_answer(subject_img, position_chosen, answer_choice)
+            chosen_pos = -1
+            continue
+        if bubble[0] >= chosen_choice[0] and diff < 40:
+            chosen_choice = bubble
+            chosen_pos = pos
+            count_bubble += 1
+        if bubble[0] < chosen_choice[0] and diff < 40:
+            count_bubble += 1
+    solve_pos = draw_answer(subject_img, chosen_pos + 1, answer_choice, count_bubble)
     return {
-        'position_solve': position_chosen
+        'position_solve': solve_pos
     }
 
 
 # draw choices with correct answer each questions
-def draw_answer(img, pos, list_answer_choice):
-    cv2.drawContours(img, [list_answer_choice[pos - 1][2]], -1, (0, 255, 0), 3)
+def draw_answer(img, pos, list_answer_choice, count):
+    solve_pos = 0
+    if pos > 0 and count == 1:
+        solve_pos = pos
+        cv2.drawContours(img, [list_answer_choice[pos - 1][2]], -1, (0, 255, 0), 3)
+    return solve_pos
 
 
 def detect_circle(img_gray, num_choices):
     thresh = cv2.adaptiveThreshold(img_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY_INV, 71, 2 | cv2.THRESH_OTSU)
-    # cv2.imshow('adaptive', thresh)
     # หา contour ที่เป็น choices คำตอบทั้งหมด
     contour = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     contour = imutils.grab_contours(contour)
@@ -68,53 +88,6 @@ def detect_circle(img_gray, num_choices):
     return questionCnts
 
 
-def mask_std(std_cnts, img_std_id):
-    stdCnts = contours.sort_contours(std_cnts, method="top-to-bottom")[0]
-    cv2.drawContours(img_std_id, stdCnts, -1, (0, 0, 255), 2)
-    list_bubbled = []
-    for (q, i) in enumerate(np.arange(0, len(stdCnts), 8)):
-        cnts = contours.sort_contours(stdCnts[i:i + 8])[0]
-        for (j, c) in enumerate(cnts):
-            mask = np.zeros(img_std_id.shape, dtype="uint8")
-            cv2.drawContours(mask, [c], -1, 255, -1)
-            mask = cv2.bitwise_or(img_std_id, img_std_id, mask=mask)
-            total = cv2.countNonZero(mask)
-            pos_choice = i + j + 1
-            col = (1 if pos_choice % 8 == 1 else
-                   2 if pos_choice % 8 == 2 else
-                   3 if pos_choice % 8 == 3 else
-                   4 if pos_choice % 8 == 4 else
-                   5 if pos_choice % 8 == 5 else
-                   6 if pos_choice % 8 == 6 else
-                   7 if pos_choice % 8 == 7 else
-                   8)
-            bubbled = (total, col, pos_choice)
-            list_bubbled.append(bubbled)
-    print(len(list_bubbled))
-    return list_bubbled
-
-
-def find_std_id(list_bubbled):
-    chosen_choice = 0
-    list_id = []
-    id_pos = 0
-    for col in range(1, 9):
-        col_choices_list = list(filter(lambda bubbles: bubbles[1] == col, list_bubbled))
-        # print(col_choices_list)
-        for pos, bubble in enumerate(col_choices_list):
-            value = bubble[0]
-            if chosen_choice == 0:
-                chosen_choice = value
-                continue
-            if value > chosen_choice:
-                chosen_choice = bubble[0]
-                id_pos = pos
-        chosen_choice = 1
-        # print(id_pos)
-        list_id.append(id_pos)
-    return list_id
-
-
 def subtract_img(list_question_cnts, subject_img, form_img):
     blanked_img = np.zeros(form_img.shape, dtype="uint8")
     new_marker = cv2.drawContours(blanked_img, list_question_cnts, -1, (255, 255, 255), -1)
@@ -130,7 +103,10 @@ def subtract_img(list_question_cnts, subject_img, form_img):
     new_sub = cv2.bitwise_and(new_marker_gray, th1)
     # cv2.imshow('new_sub', new_sub)
     # cv2.imwrite('Choices/Case6/4new_sub.jpg', new_sub)
-    return new_sub
+    return {
+        'new_sub': new_sub,
+        'new_marker_gray': new_marker_gray
+    }
 
 
 def find_circle_contour(bound_img, num_choices):
@@ -149,7 +125,7 @@ def find_circle_contour(bound_img, num_choices):
         # in order to label the contour as a question, region
         # should be sufficiently wide, sufficiently tall, and
         # have an aspect ratio approximately equal to 1
-        if 10 <= w <= 50 and 10 <= h <= 50 \
+        if 15 <= w <= 50 and 15 <= h <= 50 \
                 and len(approx) != 3 and len(approx) != 4 and len(approx) != 5:
             circleCnts.append(c)
     print(len(circleCnts))
@@ -197,17 +173,17 @@ def main_process(form_img, subject_img, quiz, amount_choices, column):
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
     questionCnts = detect_circle(gray, amount_choices*5)
     new_subject_image = subtract_img(questionCnts, subject, image)
-    boundImg = cv2.drawContours(new_subject_image.copy(), questionCnts, -1, (255, 255, 255), 1)
+    boundImg = cv2.drawContours(new_subject_image['new_sub'].copy(), questionCnts, -1, (255, 255, 255), 1)
     choicesCnts = find_circle_contour(boundImg, amount_choices*5)
-    new_sub_bgr = cv2.cvtColor(new_subject_image, cv2.COLOR_GRAY2BGR)
-    cv2.drawContours(new_sub_bgr, choicesCnts, -1, (0, 0, 255), 2)
     list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg, column)
+    dict_c_form = mask_choices_bubbled(questionCnts, new_subject_image['new_marker_gray'], column)
 
     # loop for calculate score
     dict_result = {}
     for i in range(1, quiz['amount']+1):
-        result = calulate_score(i, list_choices_bubbled, subject, amount_choices, column)
-        dict_result[str(i)] = result['position_solve']
+        result = calulate_score(i, list_choices_bubbled, subject, amount_choices, column, dict_c_form)
+        if result['position_solve'] > 0:
+            dict_result[str(i)] = result['position_solve']
     return {
         'result_solve': dict_result,
         'img_solve': subject
