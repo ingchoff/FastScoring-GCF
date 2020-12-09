@@ -24,6 +24,7 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
     chosen_pos = 0
     total_c_form = 0
     diff = []
+    count_bubble = 0
     for i, c_form in enumerate(form_choice):
         total_c_form += c_form[0]
     avg = total_c_form / 5
@@ -32,6 +33,7 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
         if not chosen_choice and abs(avg - bubble[0]) < 40:
             chosen_choice = bubble
             chosen_pos = pos
+            count_bubble += 1
             continue
         if not chosen_choice and abs(avg - bubble[0]) >= 40:
             chosen_choice = bubble
@@ -40,7 +42,10 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
         if bubble[0] >= chosen_choice[0] and abs(avg - bubble[0]) < 40:
             chosen_choice = bubble
             chosen_pos = pos
-    correct = draw_answer(questions_no, subject_img, answer_keys, chosen_pos + 1, answer_choice, diff[chosen_pos])
+            count_bubble += 1
+        if bubble[0] < chosen_choice[0] and abs(avg - bubble[0]) < 40:
+            count_bubble += 1
+    correct = draw_answer(questions_no, subject_img, answer_keys, chosen_pos + 1, answer_choice, diff[chosen_pos], count_bubble)
     return {
         'user_choice': chosen_pos + 1,
         'correct': correct['is_correct'],
@@ -49,19 +54,31 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
 
 
 # draw choices with correcr answer each questions
-def draw_answer(question_no, img, keys, pos, list_answer_choice, list_diff_bubble):
+def draw_answer(question_no, img, keys, pos, list_answer_choice, list_diff_bubble, count):
     is_correct = False
     choice = 0
     for i, correct_ans in sorted(keys.items()):
-        if correct_ans == pos and int(i) == question_no and list_diff_bubble < 40:
-            cv2.drawContours(img, [list_answer_choice[pos-1][2]], -1, (0, 255, 0), 3)
+        if correct_ans == pos and int(i) == question_no and list_diff_bubble < 40 and count == 1:
+            cv2.drawContours(img, [list_answer_choice[pos - 1][2]], -1, (0, 255, 0), 3)
             is_correct = True
             choice = correct_ans
-        elif correct_ans == pos and int(i) == question_no and list_diff_bubble >= 40:
+        elif correct_ans == pos and int(i) == question_no and list_diff_bubble < 40 and count > 1:
             cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 3)
             is_correct = False
             choice = correct_ans
-        elif correct_ans != pos and int(i) == question_no:
+        elif correct_ans == pos and int(i) == question_no and list_diff_bubble >= 40 and count == 1:
+            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 3)
+            is_correct = False
+            choice = correct_ans
+        elif correct_ans == pos and int(i) == question_no and list_diff_bubble >= 40 and count > 1:
+            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 3)
+            is_correct = False
+            choice = correct_ans
+        elif correct_ans != pos and int(i) == question_no and count <= 1:
+            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 3)
+            is_correct = False
+            choice = correct_ans
+        elif correct_ans != pos and int(i) == question_no and count > 1:
             cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 3)
             is_correct = False
             choice = correct_ans
