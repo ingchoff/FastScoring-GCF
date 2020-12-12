@@ -49,22 +49,12 @@ def alignImages(im1, im2, type_align):
         # Use homography
         height, width, channels = im2.shape
         im1Reg = cv2.warpPerspective(im1, h, (width, height))
-        if len(good_matches) <= 10 and type_align == 'std':
-            return {
-                'is_error': True,
-                'error_msg': 'ไม่สามารถตรวจรหัสนศ.ได้ เพราะไม่สามารถ align รูปส่วนฝนรหัสนศ.ได้'
-            }
-        elif len(good_matches) <= 10 and type_align == 'answer':
-            return {
-                'is_error': True,
-                'error_msg': 'ไม่สามารถตรวจคำตอบได้ เพราะไม่สามารถ align รูปส่วนฝนคำตอบได้'
-            }
-        else:
-            return {
-                'is_error': False,
-                'aligned_img': im1Reg,
-                'h': h
-            }
+
+        return {
+            'is_error': False,
+            'aligned_img': im1Reg,
+            'h': h
+        }
     except cv2.error:
         return {
             'is_error': True,

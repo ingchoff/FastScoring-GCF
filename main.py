@@ -58,35 +58,33 @@ def image_process(event, context):
             result = ImgProcess.main_process(form_tmp_path, img_aligned['aligned_img'], formstd_tmp_path,
                                              imgstd_aligned['aligned_img'],
                                              data_quiz, data_form['column'], data_form['amount'])
-            bound_img_rgb = cv2.cvtColor(result['result_img'], cv2.COLOR_BGR2RGB)
-            result_img = Image.fromarray(bound_img_rgb)
-            result_img.save(os.path.join(tempfile.gettempdir(), 'result.jpg'))
-            result_blob = bucket.blob('result/' + list_folder[1] + '/result_' + list_folder[3])
-            exam_ref.set({
-                'status': 'uploading result'
-            }, merge=True)
-            result_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'result.jpg'), content_type='image/jpeg')
-            exam_ref.set({
-                'sid': result['std_id'],
-                'path_result': 'result/' + list_folder[1] + '/result_' + list_folder[3],
-                'status': 'done',
-                'result': result['result']
-            }, merge=True)
-            os.remove(os.path.join(tempfile.gettempdir(), 'result.jpg'))
-        elif not img_aligned['is_error'] and imgstd_aligned['is_error']:
-            exam_ref.set({
-                'status': 'error',
-                'error_msg': imgstd_aligned['error_msg']
-            }, merge=True)
-        elif img_aligned['is_error'] and not imgstd_aligned['is_error']:
-            exam_ref.set({
-                'status': 'error',
-                'error_msg': img_aligned['error_msg']
-            }, merge=True)
+            if not result['is_error']:
+                bound_img_rgb = cv2.cvtColor(result['result_img'], cv2.COLOR_BGR2RGB)
+                result_img = Image.fromarray(bound_img_rgb)
+                result_img.save(os.path.join(tempfile.gettempdir(), 'result.jpg'))
+                result_blob = bucket.blob('result/' + list_folder[1] + '/result_' + list_folder[3])
+                exam_ref.set({
+                    'status': 'uploading result'
+                }, merge=True)
+                result_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'result.jpg'), content_type='image/jpeg')
+                exam_ref.set({
+                    'sid': result['std_id'],
+                    'path_result': 'result/' + list_folder[1] + '/result_' + list_folder[3],
+                    'status': 'done',
+                    'result': result['result'],
+                    'score': result['score']
+                }, merge=True)
+                os.remove(os.path.join(tempfile.gettempdir(), 'result.jpg'))
+            else:
+                exam_ref.set({
+                    'sid': result['std_id'],
+                    'status': 'error',
+                    'error_msg': result['error_msg']
+                }, merge=True)
         else:
             exam_ref.set({
                 'status': 'error',
-                'error_msg': img_aligned['error_msg']
+                'error_msg': 'ไม่สามารถ align รูปส่วนฝนรหัสนศ.และส่วนฝนคำตอบได้'
             }, merge=True)
         os.remove(form_tmp_path)
         os.remove(subject_tmp_path)
@@ -197,22 +195,28 @@ def find_solve(list_folder, qid, quiz_type, filename):
             'solve': {}
         }, merge=True)
         result_solve = FindAnswer.main_process(form_tmp_path, img_aligned['aligned_img'], data_quiz, data_form['amount'], data_form['column'])
-        bound_img_rgb = cv2.cvtColor(result_solve['img_solve'], cv2.COLOR_BGR2RGB)
-        analysed_img = Image.fromarray(bound_img_rgb)
-        analysed_img.save(os.path.join(tempfile.gettempdir(), 'analysed_solve.jpg'))
-        analysed_blob = bucket.blob('quizzes/' + list_folder[1] + '/analysed_' + qid + '_' + filename)
-        analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed_solve.jpg'),
-                                           content_type='image/jpeg')
-        quiz_ref.update({
-            'solve': result_solve['result_solve']
-        })
-        quiz_ref.set({
-            'solution_status': 'finish',
-            'analysed_solution_path': 'quizzes/' + list_folder[1] + '/analysed_' + qid + '_' + filename
-        }, merge=True)
-        quiz_ref.update({
-            'detail': firestore_v1.DELETE_FIELD
-        })
+        if 'img_solve' in result_solve:
+            bound_img_rgb = cv2.cvtColor(result_solve['img_solve'], cv2.COLOR_BGR2RGB)
+            analysed_img = Image.fromarray(bound_img_rgb)
+            analysed_img.save(os.path.join(tempfile.gettempdir(), 'analysed_solve.jpg'))
+            analysed_blob = bucket.blob('quizzes/' + list_folder[1] + '/analysed_' + qid + '_' + filename)
+            analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed_solve.jpg'),
+                                               content_type='image/jpeg')
+            quiz_ref.update({
+                'solve': result_solve['result_solve']
+            })
+            quiz_ref.set({
+                'solution_status': 'finish',
+                'analysed_solution_path': 'quizzes/' + list_folder[1] + '/analysed_' + qid + '_' + filename
+            }, merge=True)
+            quiz_ref.update({
+                'detail': firestore_v1.DELETE_FIELD
+            })
+        else:
+            quiz_ref.set({
+                'solution_status': 'error',
+                'detail': result_solve['error_msg']
+            }, merge=True)
     else:
         quiz_ref.set({
             'solution_status': 'error',

@@ -23,29 +23,30 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
     chosen_choice = None
     chosen_pos = 0
     total_c_form = 0
-    diff = []
-    count_bubble = 0
+    list_diff = []
+    list_selected = []
     for i, c_form in enumerate(form_choice):
         total_c_form += c_form[0]
-    avg = total_c_form / 5
+    avg = int(total_c_form / 5)
+    for bubble in answer_choice:
+        diff = (abs(avg - bubble[0]))
+        list_diff.append(diff)
     for pos, bubble in enumerate(answer_choice):
-        diff.append(abs(avg - bubble[0]))
-        if not chosen_choice and abs(avg - bubble[0]) < 40:
+        if not chosen_choice:
             chosen_choice = bubble
             chosen_pos = pos
-            count_bubble += 1
             continue
-        if not chosen_choice and abs(avg - bubble[0]) >= 40:
+        if bubble[0] >= chosen_choice[0]:
             chosen_choice = bubble
+            chosen_pos = pos
+    list_selected.append(chosen_pos)
+    for pos, diff in enumerate(list_diff):
+        if diff <= 60 and pos not in list_selected:
+            list_selected.append(pos)
+        elif diff >= 102 and pos in list_selected:
+            list_selected.remove(pos)
             chosen_pos = -1
-            continue
-        if bubble[0] >= chosen_choice[0] and abs(avg - bubble[0]) < 40:
-            chosen_choice = bubble
-            chosen_pos = pos
-            count_bubble += 1
-        if bubble[0] < chosen_choice[0] and abs(avg - bubble[0]) < 40:
-            count_bubble += 1
-    correct = draw_answer(questions_no, subject_img, answer_keys, chosen_pos + 1, answer_choice, diff[chosen_pos], count_bubble)
+    correct = draw_answer(questions_no, subject_img, answer_keys, sorted(list_selected), answer_choice)
     return {
         'user_choice': chosen_pos + 1,
         'correct': correct['is_correct'],
@@ -53,33 +54,29 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
     }
 
 
-# draw choices with correcr answer each questions
-def draw_answer(question_no, img, keys, pos, list_answer_choice, list_diff_bubble, count):
+# draw choices with correct answer each questions
+def draw_answer(question_no, img, keys, list_pos, list_answer_choice):
     is_correct = False
     choice = 0
     for i, correct_ans in sorted(keys.items()):
-        if correct_ans == pos and int(i) == question_no and list_diff_bubble < 40 and count == 1:
-            cv2.drawContours(img, [list_answer_choice[pos - 1][2]], -1, (0, 255, 0), 3)
+        if correct_ans - 1 in list_pos and int(i) == question_no and len(list_pos) == 1:
+            cv2.drawContours(img, [list_answer_choice[list_pos[0]][2]], -1, (0, 255, 0), 2)
             is_correct = True
             choice = correct_ans
-        elif correct_ans == pos and int(i) == question_no and list_diff_bubble < 40 and count > 1:
-            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 3)
+        elif correct_ans - 1 in list_pos and int(i) == question_no and len(list_pos) > 1:
+            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
             is_correct = False
             choice = correct_ans
-        elif correct_ans == pos and int(i) == question_no and list_diff_bubble >= 40 and count == 1:
-            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 3)
+        elif correct_ans - 1 not in list_pos and int(i) == question_no and len(list_pos) == 1:
+            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
             is_correct = False
             choice = correct_ans
-        elif correct_ans == pos and int(i) == question_no and list_diff_bubble >= 40 and count > 1:
-            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 3)
+        elif correct_ans - 1 not in list_pos and int(i) == question_no and len(list_pos) > 1:
+            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
             is_correct = False
             choice = correct_ans
-        elif correct_ans != pos and int(i) == question_no and count <= 1:
-            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 3)
-            is_correct = False
-            choice = correct_ans
-        elif correct_ans != pos and int(i) == question_no and count > 1:
-            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 3)
+        elif correct_ans - 1 not in list_pos and int(i) == question_no and len(list_pos) < 1:
+            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
             is_correct = False
             choice = correct_ans
     return {
@@ -174,13 +171,16 @@ def find_std_id(list_bubbled, list_form):
     return list_id
 
 
-def subtract_img(list_question_cnts, subject_img, form_img):
+def subtract_img(list_question_cnts, subject_gray, form_img, type_img):
+    if type_img == 'answer':
+        value = 71
+    else:
+        value = 11
     blanked_img = np.zeros(form_img.shape, dtype="uint8")
     new_marker = cv2.drawContours(blanked_img, list_question_cnts, -1, (255, 255, 255), -1)
     new_marker_gray = cv2.cvtColor(new_marker, cv2.COLOR_BGR2GRAY)
-    subject_gray = cv2.cvtColor(subject_img, cv2.COLOR_BGR2GRAY)
     subject_gray_blurred = cv2.GaussianBlur(subject_gray, (5, 5), 0)
-    th1 = cv2.adaptiveThreshold(subject_gray_blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 71,
+    th1 = cv2.adaptiveThreshold(subject_gray_blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, value,
                                 2 | cv2.THRESH_OTSU)
     new_sub = cv2.bitwise_and(new_marker_gray, th1)
     return {
@@ -253,10 +253,10 @@ def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amo
     std_image = std_img
     std_image_gray = cv2.cvtColor(std_image, cv2.COLOR_BGR2GRAY)
     std_form_gray = cv2.cvtColor(std_form, cv2.COLOR_BGR2GRAY)
-    stdCnts = detect_circle(std_form_gray, 80, 'std')
     check_std_cnts = detect_circle(std_image_gray, 1000, 'std')
     if len(check_std_cnts) >= 80:
-        new_std_img = subtract_img(stdCnts, std_image, std_form)
+        stdCnts = detect_circle(std_form_gray, 80, 'std')
+        new_std_img = subtract_img(stdCnts, std_image_gray, std_form, 'std')
         boundStdImg = cv2.drawContours(new_std_img['new_sub'], stdCnts, -1, (255, 255, 255), 1)
         circleStd = find_circle_contour(boundStdImg, 80)
         list_std_form = mask_std(stdCnts, new_std_img['new_marker_gray'])
@@ -268,23 +268,37 @@ def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amo
         else:
             std_id = 'ไม่ได้ฝนรหัสนักศึกษา'
     else:
-        std_id = 'ไม่สามารถตรวจรหัสนศ.ได้ เพราะไม่สามารถ align รูปส่วนฝนรหัสนศ.ได้'
+        std_id = 'ไม่สามารถตรวจรหัสนศ.ได้เพราะ align รูปส่วนฝนรหัสนศ.ได้ไม่ถูกต้อง'
     gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    questionCnts = detect_circle(gray, amount*5, 'answer')
-    new_subject_image = subtract_img(questionCnts, subject, image)
-    boundImg = cv2.drawContours(new_subject_image['new_sub'].copy(), questionCnts, -1, (255, 255, 255), 1)
-    choicesCnts = find_circle_contour(boundImg, amount*5)
-    list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg, column)
-    dict_c_form = mask_choices_bubbled(questionCnts, new_subject_image['new_marker_gray'], column)
+    subject_gray = cv2.cvtColor(subject, cv2.COLOR_BGR2GRAY)
+    check_ans_cnts = detect_circle(subject_gray, 1000, 'answer')
+    if len(check_ans_cnts) >= amount*5:
+        questionCnts = detect_circle(gray, amount*5, 'answer')
+        new_subject_image = subtract_img(questionCnts, subject_gray, image, 'answer')
+        boundImg = cv2.drawContours(new_subject_image['new_sub'].copy(), questionCnts, -1, (255, 255, 255), 1)
+        choicesCnts = find_circle_contour(boundImg, amount*5)
+        list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg, column)
+        dict_c_form = mask_choices_bubbled(questionCnts, new_subject_image['new_marker_gray'], column)
 
-    # loop for calculate score
-    keys = quiz['solve']
-    dict_result = {}
-    for i in range(1, quiz['amount']+1):
-        result = calulate_score(i, list_choices_bubbled, subject, keys, amount, column, dict_c_form)
-        dict_result[str(i)] = result
-    return {
-        'std_id': std_id,
-        'result_img': subject,
-        'result': dict_result
-    }
+        # loop for calculate score
+        keys = quiz['solve']
+        dict_result = {}
+        score = 0
+        for i in range(1, quiz['amount']+1):
+            result = calulate_score(i, list_choices_bubbled, subject, keys, amount, column, dict_c_form)
+            if result['correct']:
+                score += 1
+            dict_result[str(i)] = result
+        return {
+            'is_error': False,
+            'std_id': std_id,
+            'result_img': subject,
+            'result': dict_result,
+            'score': score
+        }
+    else:
+        return {
+            'std_id': std_id,
+            'error_msg': 'ไม่สามารถตรวจข้อสอบได้เพราะ align รูปส่วนฝนคำตอบได้ไม่ถูกต้อง',
+            'is_error': True
+        }
