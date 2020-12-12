@@ -16,47 +16,49 @@ def choice_to_bubble(choice, amount, col):
 
 
 # check to index of bubble choice each questions
-def calulate_score(questions_no, answer_sheet, subject_img, amount, col, dic_c_form):
+def calulate_score(questions_no, answersheet, subject_img, amount, col, dic_c_form):
     first_bubble = choice_to_bubble(questions_no, amount, col)
-    answer_choice = list(filter(lambda bubbles: first_bubble + 4 >= bubbles[1] >= first_bubble, answer_sheet))
+    answer_choice = list(filter(lambda bubbles: first_bubble + 4 >= bubbles[1] >= first_bubble, answersheet))
     form_choice = list(filter(lambda bubbles: first_bubble + 4 >= bubbles[1] >= first_bubble, dic_c_form))
     chosen_choice = None
     chosen_pos = 0
     total_c_form = 0
-    count_bubble = 0
+    list_diff = []
+    list_selected = []
     for i, c_form in enumerate(form_choice):
         total_c_form += c_form[0]
-    avg = total_c_form / 5
-    for pos, bubble in enumerate(answer_choice):
+    avg = int(total_c_form / 5)
+    for bubble in answer_choice:
         diff = (abs(avg - bubble[0]))
-        if not chosen_choice and diff < 40:
+        list_diff.append(diff)
+    for pos, bubble in enumerate(answer_choice):
+        if not chosen_choice:
             chosen_choice = bubble
             chosen_pos = pos
-            count_bubble += 1
             continue
-        if not chosen_choice and diff >= 40:
+        if bubble[0] >= chosen_choice[0]:
             chosen_choice = bubble
+            chosen_pos = pos
+    list_selected.append(chosen_pos)
+    for pos, diff in enumerate(list_diff):
+        if diff <= 60 and pos not in list_selected:
+            list_selected.append(pos)
+        elif diff > 60 and pos in list_selected:
+            list_selected.remove(pos)
             chosen_pos = -1
-            continue
-        if bubble[0] >= chosen_choice[0] and diff < 40:
-            chosen_choice = bubble
-            chosen_pos = pos
-            count_bubble += 1
-        if bubble[0] < chosen_choice[0] and diff < 40:
-            count_bubble += 1
-    solve_pos = draw_answer(subject_img, chosen_pos + 1, answer_choice, count_bubble)
+    solve_pos = draw_answer(subject_img, sorted(list_selected), answer_choice)
     return {
         'position_solve': solve_pos
     }
 
 
 # draw choices with correct answer each questions
-def draw_answer(img, pos, list_answer_choice, count):
-    solve_pos = 0
-    if pos > 0 and count == 1:
-        solve_pos = pos
-        cv2.drawContours(img, [list_answer_choice[pos - 1][2]], -1, (0, 255, 0), 3)
-    return solve_pos
+def draw_answer(img, list_pos, list_answer_choice):
+    solve_pos = -1
+    if len(list_pos) == 1:
+        solve_pos = list_pos[0]
+        cv2.drawContours(img, [list_answer_choice[solve_pos][2]], -1, (0, 255, 0), 2)
+    return solve_pos + 1
 
 
 def detect_circle(img_gray, num_choices):
@@ -88,21 +90,14 @@ def detect_circle(img_gray, num_choices):
     return questionCnts
 
 
-def subtract_img(list_question_cnts, subject_img, form_img):
+def subtract_img(list_question_cnts, subject_gray, form_img):
     blanked_img = np.zeros(form_img.shape, dtype="uint8")
     new_marker = cv2.drawContours(blanked_img, list_question_cnts, -1, (255, 255, 255), -1)
     new_marker_gray = cv2.cvtColor(new_marker, cv2.COLOR_BGR2GRAY)
-    # cv2.imwrite('Choices/Case6/2marker.jpg', new_marker_gray)
-    # cv2.imshow('new_marker_gray', new_marker_gray)
-    subject_gray = cv2.cvtColor(subject_img, cv2.COLOR_BGR2GRAY)
     subject_gray_blurred = cv2.GaussianBlur(subject_gray, (5, 5), 0)
     th1 = cv2.adaptiveThreshold(subject_gray_blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, 71,
                                 2 | cv2.THRESH_OTSU)
-    # cv2.imshow('thres_subject', th1)
-    # cv2.imwrite('Choices/Case6/3thres_subject.jpg', th1)
     new_sub = cv2.bitwise_and(new_marker_gray, th1)
-    # cv2.imshow('new_sub', new_sub)
-    # cv2.imwrite('Choices/Case6/4new_sub.jpg', new_sub)
     return {
         'new_sub': new_sub,
         'new_marker_gray': new_marker_gray
@@ -175,7 +170,7 @@ def main_process(form_img, subject_img, quiz, amount_choices, column):
     check_ans_cnts = detect_circle(subject_gray, 1000)
     if len(check_ans_cnts) >= amount_choices * 5:
         questionCnts = detect_circle(gray, amount_choices*5)
-        new_subject_image = subtract_img(questionCnts, subject, image)
+        new_subject_image = subtract_img(questionCnts, subject_gray, image)
         boundImg = cv2.drawContours(new_subject_image['new_sub'].copy(), questionCnts, -1, (255, 255, 255), 1)
         choicesCnts = find_circle_contour(boundImg, amount_choices*5)
         list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg, column)
@@ -193,7 +188,7 @@ def main_process(form_img, subject_img, quiz, amount_choices, column):
         }
     else:
         return {
-            'error_msg': 'ไม่สามารถตรวจข้อสอบได้เพราะ align รูปส่วนฝนคำตอบได้ไม่ถูกต้อง',
+            'error_msg': 'ไม่สามารถตรวจหาเฉลยได้เพราะ align รูปส่วนฝนคำตอบได้ไม่ถูกต้อง',
             'is_error': True
         }
 

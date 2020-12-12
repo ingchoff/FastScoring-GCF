@@ -175,7 +175,7 @@ def subtract_img(list_question_cnts, subject_gray, form_img, type_img):
     if type_img == 'answer':
         value = 71
     else:
-        value = 11
+        value = 71
     blanked_img = np.zeros(form_img.shape, dtype="uint8")
     new_marker = cv2.drawContours(blanked_img, list_question_cnts, -1, (255, 255, 255), -1)
     new_marker_gray = cv2.cvtColor(new_marker, cv2.COLOR_BGR2GRAY)

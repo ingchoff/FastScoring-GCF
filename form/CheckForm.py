@@ -39,6 +39,10 @@ def main_process(form_img, column, amount, form_type):
         # check this form is compatible with system.
         if len(circle_cnts) == amount*5:
             available = True
+        else:
+            return {
+                'available': False
+            }
     else:
         row = 10
         form_gray = cv2.cvtColor(form, cv2.COLOR_BGR2GRAY)
