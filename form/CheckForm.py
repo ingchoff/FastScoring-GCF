@@ -39,6 +39,10 @@ def main_process(form_img, column, amount, form_type):
         # check this form is compatible with system.
         if len(circle_cnts) == amount*5:
             available = True
+            return {
+                'bound_img': form,
+                'available': available
+            }
         else:
             return {
                 'available': False
@@ -51,7 +55,11 @@ def main_process(form_img, column, amount, form_type):
         cv2.drawContours(form, choices_cnts, -1, (0, 0, 255), 2)
         if len(circle_cnts) == row*column:
             available = True
-    return {
-        'bound_img': form,
-        'available': available
-    }
+            return {
+                'bound_img': form,
+                'available': available
+            }
+        else:
+            return {
+                'available': False
+            }

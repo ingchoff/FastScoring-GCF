@@ -6,16 +6,19 @@ GOOD_MATCH_PERCENT = 0.15
 
 def alignImages(im1, im2, type_align):
     # Convert images to grayscale
+    good_percent = 0
     im1Gray = cv2.cvtColor(im1, cv2.COLOR_BGR2GRAY)
     im2Gray = cv2.cvtColor(im2, cv2.COLOR_BGR2GRAY)
     im1blurred = cv2.GaussianBlur(im1Gray, (5, 5), 0)
     im2blurred = cv2.GaussianBlur(im2Gray, (5, 5), 0)
     sift = cv2.SIFT_create()
     if type_align == 'answer':
+        good_percent = 0.5
         # Detect Sift features and compute descriptors.
         keypoints1, descriptors1 = sift.detectAndCompute(im1Gray, None)
         keypoints2, descriptors2 = sift.detectAndCompute(im2blurred, None)
     else:
+        good_percent = 0.5
         keypoints1, descriptors1 = sift.detectAndCompute(im1blurred, None)
         keypoints2, descriptors2 = sift.detectAndCompute(im2blurred, None)
     # Match features.
@@ -32,7 +35,7 @@ def alignImages(im1, im2, type_align):
     # matches = matches[:numGoodMatches]
     good_matches = []
     for m, n in matches:
-        if m.distance < 0.5*n.distance:
+        if m.distance < good_percent * n.distance:
             good_matches.append([m])
 
     # Draw top matches
