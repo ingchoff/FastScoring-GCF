@@ -43,7 +43,7 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
     for pos, diff in enumerate(list_diff):
         if diff <= 60 and pos not in list_selected:
             list_selected.append(pos)
-        elif diff >= 102 and pos in list_selected:
+        elif diff > 60 and pos in list_selected:
             list_selected.remove(pos)
             chosen_pos = -1
     correct = draw_answer(questions_no, subject_img, answer_keys, sorted(list_selected), answer_choice)
@@ -161,7 +161,7 @@ def find_std_id(list_bubbled, list_form):
             if chosen_choice == -1:
                 chosen_choice = value
                 continue
-            if value > chosen_choice and diff < 40:
+            if value > chosen_choice and diff < 60:
                 chosen_choice = bubble[0]
                 id_pos = pos
         chosen_choice = 1

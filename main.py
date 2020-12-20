@@ -41,7 +41,7 @@ def image_process(event, context):
         formstd_tmp_path = os.path.join(tempfile.gettempdir(), list_form_std[3])
         # set blob destination file to download file
         form_blob = bucket.blob(list_form_path[1] + '/' + list_form_path[2] + '/' + list_form_path[3])
-        form_std_blob = bucket.blob('forms/' + list_folder[1] + '/' + list_form_std[3])
+        form_std_blob = bucket.blob(list_form_std[1] + '/' + list_form_std[2] + '/' + list_form_std[3])
         subject_blob = bucket.blob(event['name'])
         form_blob.download_to_filename(form_tmp_path)
         subject_blob.download_to_filename(subject_tmp_path)
