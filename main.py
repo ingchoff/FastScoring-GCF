@@ -5,6 +5,7 @@ import firebase_admin
 from firebase_admin import credentials
 from PIL import Image
 import cv2
+import json
 from exam import ImgProcess, Sift
 from form import CheckForm
 from quiz import FindAnswer
@@ -90,14 +91,6 @@ def image_process(event, context):
         os.remove(subject_tmp_path)
         os.remove(formstd_tmp_path)
         print('{}'.format('final'))
-    if list_folder[0] == "forms":
-        list_filename = list_folder[2].split('_')
-        print('{}'.format(list_filename))
-        form_id = list_filename[0]
-        type_form = list_filename[1]
-        file_name = list_filename[1]
-        if form_id != "analysed":
-            check_form(list_folder, form_id, type_form, file_name)
     if list_folder[0] == "quizzes":
         list_filename = list_folder[2].split('_')
         print('{}'.format(list_filename[0]))
@@ -108,63 +101,63 @@ def image_process(event, context):
             find_solve(list_folder, quiz_id, quiz_type, file_name)
 
 
-def check_form(list_folder, fid, form_type, filename):
-    # set up firestore
-    form_ref = db.collection('forms').document(fid)
-    snapshot_form = form_ref.get()
-    data_form = snapshot_form.to_dict()
-    # set tmp path for download images
-    form_tmp_path = os.path.join(tempfile.gettempdir(), list_folder[2])
-    if form_type == "answersheet.png":
-        # set blob destination file to download file
-        form_blob = bucket.blob(list_folder[0] + '/' + list_folder[1] + '/' + list_folder[2])
-        form_blob.download_to_filename(form_tmp_path)
-        form_ref.set({
-            'answer_status': 'analysing'
-        }, merge=True)
-        is_available = CheckForm.main_process(form_tmp_path, data_form['column'], data_form['amount'], form_type)
-        if is_available['available']:
-            bound_img_rgb = cv2.cvtColor(is_available['bound_img'], cv2.COLOR_BGR2RGB)
-            analysed_img = Image.fromarray(bound_img_rgb)
-            analysed_img.save(os.path.join(tempfile.gettempdir(), 'analysed.jpg'))
-            analysed_blob = bucket.blob('forms/' + list_folder[1] + '/analysed_' + fid + '_' + filename)
-            analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed.jpg'),
-                                               content_type='image/jpeg')
-            form_ref.set({
-                'answer_status': 'pass',
-                'analysed_answersheet_path': 'forms/' + list_folder[1] + '/analysed_' + fid + '_' + filename
-            }, merge=True)
-        else:
-            form_ref.set({
-                'error_ans_msg': 'Not Compatible',
-                'answer_status': 'error'
-            }, merge=True)
-        os.remove(form_tmp_path)
-    if form_type == "student.png":
-        # set blob destination file to download file
-        form_blob = bucket.blob(list_folder[0] + '/' + list_folder[1] + '/' + list_folder[2])
-        form_blob.download_to_filename(form_tmp_path)
-        form_ref.set({
-            'stu_status': 'analysing'
-        }, merge=True)
-        is_available = CheckForm.main_process(form_tmp_path, data_form['stu_column'], data_form['amount'], form_type)
-        if is_available['available']:
-            bound_img_rgb = cv2.cvtColor(is_available['bound_img'], cv2.COLOR_BGR2RGB)
-            analysed_img = Image.fromarray(bound_img_rgb)
-            analysed_img.save(os.path.join(tempfile.gettempdir(), 'analysed.jpg'))
-            analysed_blob = bucket.blob('forms/' + list_folder[1] + '/analysed_' + fid + '_' + filename)
-            analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed.jpg'),
-                                               content_type='image/jpeg')
-            form_ref.set({
-                'stu_status': 'pass',
-                'analysed_stu_path': 'forms/' + list_folder[1] + '/analysed_' + fid + '_' + filename
-            }, merge=True)
-        else:
-            form_ref.set({
-                'error_stu_msg': 'Not Compatible',
-                'stu_status': 'error'
-            }, merge=True)
-        os.remove(form_tmp_path)
+# def check_form(list_folder, fid, form_type, filename):
+#     # set up firestore
+#     form_ref = db.collection('forms').document(fid)
+#     snapshot_form = form_ref.get()
+#     data_form = snapshot_form.to_dict()
+#     # set tmp path for download images
+#     form_tmp_path = os.path.join(tempfile.gettempdir(), list_folder[2])
+#     if form_type == "answersheet.png":
+#         # set blob destination file to download file
+#         form_blob = bucket.blob(list_folder[0] + '/' + list_folder[1] + '/' + list_folder[2])
+#         form_blob.download_to_filename(form_tmp_path)
+#         form_ref.set({
+#             'answer_status': 'analysing'
+#         }, merge=True)
+#         is_available = CheckForm.main_process(form_tmp_path, data_form['column'], data_form['amount'], form_type)
+#         if is_available['available']:
+#             bound_img_rgb = cv2.cvtColor(is_available['bound_img'], cv2.COLOR_BGR2RGB)
+#             analysed_img = Image.fromarray(bound_img_rgb)
+#             analysed_img.save(os.path.join(tempfile.gettempdir(), 'analysed.jpg'))
+#             analysed_blob = bucket.blob('forms/' + list_folder[1] + '/analysed_' + fid + '_' + filename)
+#             analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed.jpg'),
+#                                                content_type='image/jpeg')
+#             form_ref.set({
+#                 'answer_status': 'pass',
+#                 'analysed_answersheet_path': 'forms/' + list_folder[1] + '/analysed_' + fid + '_' + filename
+#             }, merge=True)
+#         else:
+#             form_ref.set({
+#                 'error_ans_msg': 'Not Compatible',
+#                 'answer_status': 'error'
+#             }, merge=True)
+#         os.remove(form_tmp_path)
+#     if form_type == "student.png":
+#         # set blob destination file to download file
+#         form_blob = bucket.blob(list_folder[0] + '/' + list_folder[1] + '/' + list_folder[2])
+#         form_blob.download_to_filename(form_tmp_path)
+#         form_ref.set({
+#             'stu_status': 'analysing'
+#         }, merge=True)
+#         is_available = CheckForm.main_process(form_tmp_path, data_form['stu_column'], data_form['amount'], form_type)
+#         if is_available['available']:
+#             bound_img_rgb = cv2.cvtColor(is_available['bound_img'], cv2.COLOR_BGR2RGB)
+#             analysed_img = Image.fromarray(bound_img_rgb)
+#             analysed_img.save(os.path.join(tempfile.gettempdir(), 'analysed.jpg'))
+#             analysed_blob = bucket.blob('forms/' + list_folder[1] + '/analysed_' + fid + '_' + filename)
+#             analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed.jpg'),
+#                                                content_type='image/jpeg')
+#             form_ref.set({
+#                 'stu_status': 'pass',
+#                 'analysed_stu_path': 'forms/' + list_folder[1] + '/analysed_' + fid + '_' + filename
+#             }, merge=True)
+#         else:
+#             form_ref.set({
+#                 'error_stu_msg': 'Not Compatible',
+#                 'stu_status': 'error'
+#             }, merge=True)
+#         os.remove(form_tmp_path)
 
 
 def find_solve(list_folder, qid, quiz_type, filename):
@@ -224,3 +217,134 @@ def find_solve(list_folder, qid, quiz_type, filename):
         }, merge=True)
     os.remove(form_tmp_path)
     os.remove(solve_tmp_path)
+
+
+def coords(data, context):
+    """ Triggered by a change to a Firestore document.
+    Args:
+        data (dict): The event payload.
+        context (google.cloud.functions.Context): Metadata for the event.
+    """
+
+    print('Event type: {}'.format(context.resource))
+    print('{}'.format(data))
+    list_resource = context.resource.split("/")
+    if list_resource[5] == 'forms':
+        form_ref = db.collection('forms').document(list_resource[6])
+        # snapshot_form = form_ref.get()
+        # data_form = snapshot_form.to_dict()
+        if not data['value']['fields'].get('answer_status'):
+            return
+        print(data['value']['fields']['answer_status'])
+        if data['value']['fields']['answer_status']['stringValue'] == 'pending' \
+                or data['value']['fields']['answer_status']['stringValue'] == 'resend':
+            print(data['value']['fields']['answer_sheet_coords']['mapValue']['fields'])
+            answer_coords = data['value']['fields']['answer_sheet_coords']['mapValue']['fields']
+            form_tmp_path = os.path.join(tempfile.gettempdir(), 'form_tmp.jpg')
+            owner = data['value']['fields']['owner']['stringValue']
+            form_blob = bucket.blob('forms' + '/' + owner + '/' + list_resource[6] + '_form.jpg')
+            form_blob.download_to_filename(form_tmp_path)
+            x = 0
+            y = 0
+            h = 0
+            w = 0
+            for key in answer_coords['x']:
+                if key == 'doubleValue':
+                    x = int(answer_coords['x']['doubleValue'])
+                else:
+                    x = int(answer_coords['x']['integerValue'])
+            for key in answer_coords['y']:
+                if key == 'doubleValue':
+                    y = int(answer_coords['y']['doubleValue'])
+                else:
+                    y = int(answer_coords['y']['integerValue'])
+            for key in answer_coords['width']:
+                if key == 'doubleValue':
+                    w = int(answer_coords['width']['doubleValue'])
+                else:
+                    w = int(answer_coords['width']['integerValue'])
+            for key in answer_coords['height']:
+                if key == 'doubleValue':
+                    h = int(answer_coords['height']['doubleValue'])
+                else:
+                    h = int(answer_coords['height']['integerValue'])
+            form_full = cv2.imread(form_tmp_path)
+            crop_img_answer = form_full[y:y + h, x:x + w]
+            form_ref.set({
+                'answer_status': 'analysing'
+            }, merge=True)
+            is_available_answer = CheckForm.main_process(crop_img_answer, data['value']['fields']['column']['integerValue'],
+                                                         data['value']['fields']['amount']['integerValue'], 'answer')
+            if is_available_answer['available']:
+                bound_img_rgb = cv2.cvtColor(is_available_answer['bound_img'], cv2.COLOR_BGR2RGB)
+                analysed_img = Image.fromarray(bound_img_rgb)
+                analysed_img.save(os.path.join(tempfile.gettempdir(), 'analysed.jpg'))
+                analysed_blob = bucket.blob('forms/' + owner + '/analysed_' + list_resource[6] + '_' + 'answersheet.jpg')
+                analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed.jpg'),
+                                                   content_type='image/jpeg')
+                form_ref.set({
+                    'answer_status': 'pass',
+                    'analysed_answersheet_path': 'forms/' + data['value']['fields']['owner']['stringValue'] + '/analysed_' + list_resource[6] + '_' + 'answersheet.jpg'
+                }, merge=True)
+            else:
+                form_ref.set({
+                    'error_ans_msg': 'Not Compatible',
+                    'answer_status': 'error'
+                }, merge=True)
+            os.remove(form_tmp_path)
+        if not data['value']['fields'].get('stu_status'):
+            return
+        if data['value']['fields']['stu_status']['stringValue'] == 'pending' \
+                or data['value']['fields']['stu_status']['stringValue'] == 'resend':
+            stu_coords = data['value']['fields']['student_coords']['mapValue']['fields']
+            x = 0
+            y = 0
+            h = 0
+            w = 0
+            for key in stu_coords['x']:
+                if key == 'doubleValue':
+                    x = int(stu_coords['x']['doubleValue'])
+                else:
+                    x = int(stu_coords['x']['integerValue'])
+            for key in stu_coords['y']:
+                if key == 'doubleValue':
+                    y = int(stu_coords['y']['doubleValue'])
+                else:
+                    y = int(stu_coords['y']['integerValue'])
+            for key in stu_coords['width']:
+                if key == 'doubleValue':
+                    w = int(stu_coords['width']['doubleValue'])
+                else:
+                    w = int(stu_coords['width']['integerValue'])
+            for key in stu_coords['height']:
+                if key == 'doubleValue':
+                    h = int(stu_coords['height']['doubleValue'])
+                else:
+                    h = int(stu_coords['height']['integerValue'])
+            form_tmp_path = os.path.join(tempfile.gettempdir(), 'form_tmp.jpg')
+            owner = data['value']['fields']['owner']['stringValue']
+            form_blob = bucket.blob('forms' + '/' + owner + '/' + list_resource[6] + '_form.jpg')
+            form_blob.download_to_filename(form_tmp_path)
+            form_full = cv2.imread(form_tmp_path)
+            crop_img_stu = form_full[y:y + h, x:x + w]
+            form_ref.set({
+                'stu_status': 'analysing'
+            }, merge=True)
+            is_available_stu = CheckForm.main_process(crop_img_stu, data['value']['fields']['stu_column']['integerValue'], data['value']['fields']['amount']['integerValue'], 'stu')
+            if is_available_stu['available']:
+                bound_img_rgb = cv2.cvtColor(is_available_stu['bound_img'], cv2.COLOR_BGR2RGB)
+                analysed_img = Image.fromarray(bound_img_rgb)
+                analysed_img.save(os.path.join(tempfile.gettempdir(), 'analysed.jpg'))
+                analysed_blob = bucket.blob('forms/' + owner + '/analysed_' + list_resource[6] + '_' + 'student.jpg')
+                analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed.jpg'),
+                                                   content_type='image/jpeg')
+                form_ref.set({
+                    'stu_status': 'pass',
+                    'analysed_stu_path': 'forms/' + data['value']['fields']['owner']['stringValue'] + '/analysed_' + list_resource[6] + '_' + 'student.jpg'
+                }, merge=True)
+            else:
+                form_ref.set({
+                    'error_ans_msg': 'Not Compatible',
+                    'stu_status': 'error'
+                }, merge=True)
+            os.remove(form_tmp_path)

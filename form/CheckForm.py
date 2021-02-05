@@ -21,23 +21,26 @@ def find_contour_circle(form_img, num_choices):
     print(len(list_circle))
     if len(list_circle) > num_choices:
         skip = len(list_circle) - num_choices
-        list_circle = list_circle[:-int(skip)]
-    print(len(list_circle))
-    return list_circle
+        list_circle_after = list_circle[:-int(skip)]
+    else:
+        list_circle_after = list_circle
+    print(len(list_circle_after))
+    return {'list_circle': list_circle,
+            'list_circle_after': list_circle_after}
 
 
 def main_process(form_img, column, amount, form_type):
     available = False
-    form = cv2.imread(form_img)
-    if form_type == "answersheet.png":
-        row = amount / column
+    form = form_img
+    if form_type == "answer":
+        row = int(int(amount) / int(column))
         form_gray = cv2.cvtColor(form, cv2.COLOR_BGR2GRAY)
         # still fixed choice each question = 5
-        circle_cnts = find_contour_circle(form_gray, 5*column*row)
-        choices_cnts = contours.sort_contours(circle_cnts, method="top-to-bottom")[0]
+        circle_cnts = find_contour_circle(form_gray, 5*int(column)*int(row))
+        choices_cnts = contours.sort_contours(circle_cnts['list_circle_after'], method="top-to-bottom")[0]
         cv2.drawContours(form, choices_cnts, -1, (0, 0, 255), 2)
         # check this form is compatible with system.
-        if len(circle_cnts) == amount*5:
+        if len(circle_cnts['list_circle_after']) == int(amount)*5:
             available = True
             return {
                 'bound_img': form,
@@ -50,10 +53,10 @@ def main_process(form_img, column, amount, form_type):
     else:
         row = 10
         form_gray = cv2.cvtColor(form, cv2.COLOR_BGR2GRAY)
-        circle_cnts = find_contour_circle(form_gray, row*column)
-        choices_cnts = contours.sort_contours(circle_cnts, method="top-to-bottom")[0]
+        circle_cnts = find_contour_circle(form_gray, row*int(column))
+        choices_cnts = contours.sort_contours(circle_cnts['list_circle_after'], method="top-to-bottom")[0]
         cv2.drawContours(form, choices_cnts, -1, (0, 0, 255), 2)
-        if len(circle_cnts) == row*column:
+        if len(circle_cnts['list_circle_after']) == row*int(column) and len(circle_cnts['list_circle']) == 160:
             available = True
             return {
                 'bound_img': form,
