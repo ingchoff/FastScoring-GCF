@@ -246,9 +246,19 @@ def mask_choices_bubbled(choice_contours, bound_img, col):
     return list_bubbled
 
 
-def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amount):
+def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amount, stu_coords, answer_coords):
     image = cv2.imread(form_img)
-    std_form = cv2.imread(form_std_img)
+    x_ans = int(answer_coords['x'])
+    y_ans = int(answer_coords['y'])
+    w_ans = int(answer_coords['width'])
+    h_ans = int(answer_coords['height'])
+    x_stu = int(stu_coords['x'])
+    y_stu = int(stu_coords['y'])
+    w_stu = int(stu_coords['width'])
+    h_stu = int(stu_coords['height'])
+    answer_form = image[y_ans:y_ans + h_ans, x_ans:x_ans + w_ans]
+    std_form = image[y_stu:y_stu + h_stu, x_stu:x_stu + w_stu]
+    # std_form = cv2.imread(form_std_img)
     subject = subject_img
     std_image = std_img
     std_image_gray = cv2.cvtColor(std_image, cv2.COLOR_BGR2GRAY)
@@ -269,12 +279,12 @@ def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amo
             std_id = 'ไม่ได้ฝนรหัสนักศึกษา'
     else:
         std_id = 'ไม่สามารถตรวจรหัสนศ.ได้เพราะ align รูปส่วนฝนรหัสนศ.ได้ไม่ถูกต้อง'
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(answer_form, cv2.COLOR_BGR2GRAY)
     subject_gray = cv2.cvtColor(subject, cv2.COLOR_BGR2GRAY)
     check_ans_cnts = detect_circle(subject_gray, 1000, 'answer')
     if len(check_ans_cnts) >= amount*5:
         questionCnts = detect_circle(gray, amount*5, 'answer')
-        new_subject_image = subtract_img(questionCnts, subject_gray, image, 'answer')
+        new_subject_image = subtract_img(questionCnts, subject_gray, answer_form, 'answer')
         boundImg = cv2.drawContours(new_subject_image['new_sub'].copy(), questionCnts, -1, (255, 255, 255), 1)
         choicesCnts = find_circle_contour(boundImg, amount*5)
         list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg, column)

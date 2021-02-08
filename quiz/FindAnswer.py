@@ -162,15 +162,20 @@ def mask_choices_bubbled(choice_contours, bound_img, col):
     return list_bubbled
 
 
-def main_process(form_img, subject_img, quiz, amount_choices, column):
-    image = cv2.imread(form_img)
+def main_process(form_img, subject_img, quiz, amount_choices, column, coords):
+    form = cv2.imread(form_img)
+    x = int(coords['x'])
+    y = int(coords['y'])
+    w = int(coords['width'])
+    h = int(coords['height'])
+    crop_form_img = form[y:y + h, x:x + w]
     subject = subject_img
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray = cv2.cvtColor(crop_form_img, cv2.COLOR_BGR2GRAY)
     subject_gray = cv2.cvtColor(subject, cv2.COLOR_BGR2GRAY)
     check_ans_cnts = detect_circle(subject_gray, 1000)
     if len(check_ans_cnts) >= amount_choices * 5:
         questionCnts = detect_circle(gray, amount_choices*5)
-        new_subject_image = subtract_img(questionCnts, subject_gray, image)
+        new_subject_image = subtract_img(questionCnts, subject_gray, crop_form_img)
         boundImg = cv2.drawContours(new_subject_image['new_sub'].copy(), questionCnts, -1, (255, 255, 255), 1)
         choicesCnts = find_circle_contour(boundImg, amount_choices*5)
         list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg, column)

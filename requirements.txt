@@ -4,3 +4,4 @@ imutils~=0.5.3
 Pillow~=8.0.1
 google-cloud-storage==1.32.0
 firebase_admin
+scikit-image~=0.18.1

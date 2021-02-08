@@ -9,6 +9,7 @@ import json
 from exam import ImgProcess, Sift
 from form import CheckForm
 from quiz import FindAnswer
+from exam import Orb
 
 gcs = storage.Client()
 bucket = gcs.get_bucket(os.environ['CLOUD_STORAGE_BUCKET'])
@@ -34,31 +35,31 @@ def image_process(event, context):
         data_quiz = quiz_snapshot.to_dict()
         form_snapshot = data_quiz['form'].get()
         data_form = form_snapshot.to_dict()
-        list_form_path = data_form['answer_sheet_path'].split('/')
-        list_form_std = data_form['student_path'].split('/')
+        list_fid = data_form['analysed_answersheet_path'].split('/')
+        fid = list_fid[2].split('_')[1]
+        answer_sheet_path = '/forms/' + data_form['owner'] + '/' + fid + '_form.jpg'
+        list_form_path = answer_sheet_path.split('/')
         # set tmp path for download images
         subject_tmp_path = os.path.join(tempfile.gettempdir(), list_folder[3])
         form_tmp_path = os.path.join(tempfile.gettempdir(), list_form_path[3])
-        formstd_tmp_path = os.path.join(tempfile.gettempdir(), list_form_std[3])
         # set blob destination file to download file
         form_blob = bucket.blob(list_form_path[1] + '/' + list_form_path[2] + '/' + list_form_path[3])
-        form_std_blob = bucket.blob(list_form_std[1] + '/' + list_form_std[2] + '/' + list_form_std[3])
         subject_blob = bucket.blob(event['name'])
         form_blob.download_to_filename(form_tmp_path)
         subject_blob.download_to_filename(subject_tmp_path)
-        form_std_blob.download_to_filename(formstd_tmp_path)
         exam_ref.set({
             'status': 'aligning'
         }, merge=True)
-        img_aligned = Sift.main_process(form_tmp_path, subject_tmp_path, 'answer')
-        imgstd_aligned = Sift.main_process(formstd_tmp_path, subject_tmp_path, 'std')
-        if not img_aligned['is_error'] and not imgstd_aligned['is_error']:
+        img_aligned = Orb.main_process(form_tmp_path, subject_tmp_path, data_form['answer_sheet_coords'], data_form['student_coords'], 'answer')
+        # img_aligned = Sift.main_process(form_tmp_path, subject_tmp_path, 'answer')
+        # imgstd_aligned = Sift.main_process(formstd_tmp_path, subject_tmp_path, 'std')
+        if not img_aligned['is_error']:
             exam_ref.set({
                 'status': 'scoring'
             }, merge=True)
-            result = ImgProcess.main_process(form_tmp_path, img_aligned['aligned_img'], formstd_tmp_path,
-                                             imgstd_aligned['aligned_img'],
-                                             data_quiz, data_form['column'], data_form['amount'])
+            result = ImgProcess.main_process(form_tmp_path, img_aligned['answer_aligned_img'], '',
+                                             img_aligned['stu_aligned_img'],
+                                             data_quiz, data_form['column'], data_form['amount'], data_form['student_coords'], data_form['answer_sheet_coords'])
             if not result['is_error']:
                 bound_img_rgb = cv2.cvtColor(result['result_img'], cv2.COLOR_BGR2RGB)
                 result_img = Image.fromarray(bound_img_rgb)
@@ -89,7 +90,7 @@ def image_process(event, context):
             }, merge=True)
         os.remove(form_tmp_path)
         os.remove(subject_tmp_path)
-        os.remove(formstd_tmp_path)
+        # os.remove(formstd_tmp_path)
         print('{}'.format('final'))
     if list_folder[0] == "quizzes":
         list_filename = list_folder[2].split('_')
@@ -168,9 +169,13 @@ def find_solve(list_folder, qid, quiz_type, filename):
     snapshot_form = data_quiz['form'].get()
     data_form = snapshot_form.to_dict()
     # set tmp path for download images
-    list_form_path = data_form['answer_sheet_path'].split('/')
+    list_fid = data_form['analysed_answersheet_path'].split('/')
+    fid = list_fid[2].split('_')[1]
+    form_path = '/forms/' + data_form['owner'] + '/' + fid + '_form.jpg'
+    list_form_path = form_path.split('/')
+    # list_form_path = data_form['answer_sheet_path'].split('/')
     solve_tmp_path = os.path.join(tempfile.gettempdir(), filename)
-    form_tmp_path = os.path.join(tempfile.gettempdir(), list_form_path[3])
+    form_tmp_path = os.path.join(tempfile.gettempdir(), fid + '_answersheet.png')
     # set blob destination file to download file
     form_blob = bucket.blob(list_form_path[1] + '/' + list_form_path[2] + '/' + list_form_path[3])
     form_blob.download_to_filename(form_tmp_path)
@@ -180,14 +185,15 @@ def find_solve(list_folder, qid, quiz_type, filename):
         'solution_status': 'process',
         'detail': 'aligning'
     }, merge=True)
-    img_aligned = Sift.main_process(form_tmp_path, solve_tmp_path, 'answer')
-    if 'aligned_img' in img_aligned:
+    img_aligned = Orb.main_process(form_tmp_path, solve_tmp_path, data_form['answer_sheet_coords'], data_form['student_coords'], 'answer')
+    # img_aligned = Sift.main_process(form_tmp_path, solve_tmp_path, 'answer')
+    if 'answer_aligned_img' in img_aligned:
         quiz_ref.set({
             'solution_status': 'process',
             'detail': 'analysing',
             'solve': {}
         }, merge=True)
-        result_solve = FindAnswer.main_process(form_tmp_path, img_aligned['aligned_img'], data_quiz, data_form['amount'], data_form['column'])
+        result_solve = FindAnswer.main_process(form_tmp_path, img_aligned['answer_aligned_img'], data_quiz, data_form['amount'], data_form['column'], data_form['answer_sheet_coords'])
         if 'img_solve' in result_solve:
             bound_img_rgb = cv2.cvtColor(result_solve['img_solve'], cv2.COLOR_BGR2RGB)
             analysed_img = Image.fromarray(bound_img_rgb)
