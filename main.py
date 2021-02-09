@@ -16,7 +16,7 @@ bucket = gcs.get_bucket(os.environ['CLOUD_STORAGE_BUCKET'])
 db = firestore_v1.Client()
 
 
-def image_process(event, context):
+def img_process(event, context):
 
     print('Event type: {}'.format(context.event_type))
     print('File: {}'.format(event['name']))

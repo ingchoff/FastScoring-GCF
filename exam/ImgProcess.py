@@ -25,11 +25,13 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
     total_c_form = 0
     list_diff = []
     list_selected = []
+    list_bubble = []
     for i, c_form in enumerate(form_choice):
         total_c_form += c_form[0]
     avg = int(total_c_form / 5)
     for bubble in answer_choice:
         diff = (abs(avg - bubble[0]))
+        list_bubble.append(bubble[0])
         list_diff.append(diff)
     for pos, bubble in enumerate(answer_choice):
         if not chosen_choice:
@@ -40,12 +42,30 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
             chosen_choice = bubble
             chosen_pos = pos
     list_selected.append(chosen_pos)
+    print(list_bubble)
+    print(list_diff)
     for pos, diff in enumerate(list_diff):
+        # กรณีที่ฝน 2 ช้อย
         if diff <= 60 and pos not in list_selected:
             list_selected.append(pos)
+        # กรณีถ้าไม่ได้ฝนเลยต้องทำใหลบ
         elif diff > 60 and pos in list_selected:
-            list_selected.remove(pos)
-            chosen_pos = -1
+            percent = (list_bubble[pos] / avg) * 100
+            print(percent)
+            if percent < 45:
+                list_selected.remove(pos)
+                chosen_pos = -1
+            # if percent >= 45 and diff > 130:
+            #     list_selected.remove(pos)
+            #     chosen_pos = -1
+            if percent >= 45 and pos != 0 and abs(list_diff[pos]-list_diff[pos-1]) <= 30:
+                list_selected.remove(pos)
+                chosen_pos = -1
+            if percent >= 45 and pos == 0 and abs(list_diff[pos]-list_diff[pos+1]) <= 30:
+                list_selected.remove(pos)
+                chosen_pos = -1
+
+    print(list_selected)
     correct = draw_answer(questions_no, subject_img, answer_keys, sorted(list_selected), answer_choice)
     return {
         'user_choice': chosen_pos + 1,
@@ -295,6 +315,7 @@ def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amo
         dict_result = {}
         score = 0
         for i in range(1, quiz['amount']+1):
+            print('question: ' + str(i))
             result = calulate_score(i, list_choices_bubbled, subject, keys, amount, column, dict_c_form)
             if result['correct']:
                 score += 1
