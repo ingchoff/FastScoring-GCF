@@ -203,13 +203,16 @@ def find_std_id(list_bubbled, list_form):
                 print(percent)
                 if percent < 45:
                     list_selected.remove(pos)
-                if percent >= 45 and pos != 0 and abs(list_diff[pos] - list_diff[pos - 1]) <= 30:
+                if percent >= 45 and pos != 9 and abs(list_diff[pos] - list_diff[pos - 1]) <= 30 and abs(
+                        list_diff[pos] - list_diff[pos + 1]) <= 30:
                     list_selected.remove(pos)
-                if percent >= 45 and pos == 0 and abs(list_diff[pos] - list_diff[pos + 1]) <= 30:
+                if percent >= 45 and pos == 9 and abs(list_diff[pos] - list_diff[pos - 1]) <= 30 and abs(
+                        list_diff[pos] - list_diff[0]) <= 30:
                     list_selected.remove(pos)
         print(list_selected)
-        for stu_id in list_selected:
-            list_id.append(stu_id)
+        for pos, stu_id in enumerate(list_selected):
+            if pos == 0:
+                list_id.append(stu_id)
     return list_id
 
 

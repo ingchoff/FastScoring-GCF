@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 from exam import Compare
 from exam import MsePaper
+from exam import ImgProcess
 
 GOOD_MATCH_PERCENT = 0.15
 
@@ -59,6 +60,42 @@ def alignImages(im1, im2, type_sift, plus, descriptors1, descriptors2, keypoints
         }
 
 
+def find_compare(rounds, list_mse_prv, img, img_gray, img_refer, img_refer_gray):
+    is_loop = True
+    increase = 0
+    list_mse = []
+    start_feature = 0
+    end_feature = 0
+    if rounds == 1:
+        start_feature = 1000
+        end_feature = 2500
+    elif rounds == 2:
+        start_feature = 2600
+        end_feature = 5000
+        list_mse = list_mse_prv
+    while is_loop:
+        # Registered image will be resotred in imReg.
+        # The estimated homography will be stored in h.
+        orb = cv2.ORB_create(start_feature + increase)
+        keypoints1, descriptors1 = orb.detectAndCompute(img_gray, None)
+        keypoints2, descriptors2 = orb.detectAndCompute(img_refer_gray, None)
+        result_aligned = alignImages(img, img_refer, 'std', increase, descriptors1, descriptors2, keypoints1,
+                                     keypoints2)
+        if result_aligned['is_error']:
+            print(result_aligned['is_error'])
+        else:
+            is_aligned_pass = Compare.main_process(result_aligned['aligned_img'], img_refer, start_feature+increase)
+            if is_aligned_pass["is_aligned"]:
+                is_loop = False
+            else:
+                list_mse.append(is_aligned_pass["aligned_value"])
+                if (start_feature + increase) == end_feature:
+                    is_loop = False
+                    increase = 0
+                increase += 100
+    return list_mse
+
+
 def main_process(img_form, img_subject, answer_coords, stu_coords, type_align):
     imReference = cv2.imread(img_form, cv2.IMREAD_COLOR)
     # Read image to be aligned
@@ -68,58 +105,11 @@ def main_process(img_form, img_subject, answer_coords, stu_coords, type_align):
     # Convert images to grayscale
     im1Gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
     im2Gray = cv2.cvtColor(imReference, cv2.COLOR_BGR2GRAY)
+
     # Detect Sift features and compute descriptors.
-    # print(500 + plus)
-    # orb = cv2.ORB_create(3000)
-    # keypoints1, descriptors1 = orb.detectAndCompute(im1blurred, None)
-    # keypoints2, descriptors2 = orb.detectAndCompute(im2Gray, None)
-    list_values = []
-    while is_loop:
-        print("Aligning images ...")
-        # print(increase)
-        # Registered image will be resotred in imReg.
-        # The estimated homography will be stored in h.
-        orb = cv2.ORB_create(1000 + increase)
-        keypoints1, descriptors1 = orb.detectAndCompute(im1Gray, None)
-        keypoints2, descriptors2 = orb.detectAndCompute(im2Gray, None)
-        result_aligned = alignImages(im, imReference, 'std', increase, descriptors1, descriptors2, keypoints1,
-                                     keypoints2)
-        if result_aligned['is_error']:
-            return {
-                'error_msg': result_aligned['error_msg'],
-                'is_error': True
-            }
-        else:
-            is_aligned_pass = Compare.main_process(result_aligned['aligned_img'], imReference, increase+1000)
-            if is_aligned_pass["is_aligned"]:
-                # Print estimated homography
-                print("Estimated homography : \n", result_aligned['h'])
-                x_ans = int(answer_coords['x'])
-                y_ans = int(answer_coords['y'])
-                w_ans = int(answer_coords['width'])
-                h_ans = int(answer_coords['height'])
-                x_stu = int(stu_coords['x'])
-                y_stu = int(stu_coords['y'])
-                w_stu = int(stu_coords['width'])
-                h_stu = int(stu_coords['height'])
-                answer_crop_img = result_aligned['aligned_img'][y_ans:y_ans + h_ans, x_ans:x_ans + w_ans]
-                stu_crop_img = result_aligned['aligned_img'][y_stu:y_stu + h_stu, x_stu:x_stu + w_stu]
-                # crop_gray = cv2.cvtColor(crop_img, cv2.COLOR_BGR2GRAY)
-                # test_grader.detect_circle(crop_gray, 500, 'answer')
-                is_loop = False
-                return {
-                    'answer_aligned_img': answer_crop_img,
-                    'stu_aligned_img': stu_crop_img,
-                    'is_error': False
-                }
-            else:
-                if (1000 + increase) == 5000:
-                    is_loop = False
-                list_values.append(is_aligned_pass["aligned_value"])
-                increase += 100
-                print("re-aligned")
+    list_values = find_compare(1, [], im, im1Gray, imReference, im2Gray)
     result_selected = MsePaper.main(list_values)
-    print(result_selected["feature"])
+    print("feature selected:" + str(result_selected["feature"]))
     orb = cv2.ORB_create(result_selected["feature"])
     keypoints1, descriptors1 = orb.detectAndCompute(im1Gray, None)
     keypoints2, descriptors2 = orb.detectAndCompute(im2Gray, None)
@@ -140,9 +130,43 @@ def main_process(img_form, img_subject, answer_coords, stu_coords, type_align):
         w_stu = int(stu_coords['width'])
         h_stu = int(stu_coords['height'])
         answer_crop_img = result_aligned['aligned_img'][y_ans:y_ans + h_ans, x_ans:x_ans + w_ans]
+        answer_crop_img_gray = cv2.cvtColor(answer_crop_img, cv2.COLOR_BGR2GRAY)
         stu_crop_img = result_aligned['aligned_img'][y_stu:y_stu + h_stu, x_stu:x_stu + w_stu]
-        return {
-            'answer_aligned_img': answer_crop_img,
-            'stu_aligned_img': stu_crop_img,
-            'is_error': False
-        }
+        check_circle = ImgProcess.detect_circle(answer_crop_img_gray, 500, 'exam')
+        if len(check_circle) >= 500:
+            return {
+                'answer_aligned_img': answer_crop_img,
+                'stu_aligned_img': stu_crop_img,
+                'is_error': False
+            }
+        else:
+            list_values = find_compare(2, list_values, im, im1Gray, imReference, im2Gray)
+            result_selected = MsePaper.main(list_values)
+            print("feature selected:" + str(result_selected["feature"]))
+            orb = cv2.ORB_create(result_selected["feature"])
+            keypoints1, descriptors1 = orb.detectAndCompute(im1Gray, None)
+            keypoints2, descriptors2 = orb.detectAndCompute(im2Gray, None)
+            result_aligned = alignImages(im, imReference, 'std', increase, descriptors1, descriptors2,
+                                         keypoints1,
+                                         keypoints2)
+            if result_aligned['is_error']:
+                return {
+                    'error_msg': result_aligned['error_msg'],
+                    'is_error': True
+                }
+            else:
+                x_ans = int(answer_coords['x'])
+                y_ans = int(answer_coords['y'])
+                w_ans = int(answer_coords['width'])
+                h_ans = int(answer_coords['height'])
+                x_stu = int(stu_coords['x'])
+                y_stu = int(stu_coords['y'])
+                w_stu = int(stu_coords['width'])
+                h_stu = int(stu_coords['height'])
+                answer_crop_img = result_aligned['aligned_img'][y_ans:y_ans + h_ans, x_ans:x_ans + w_ans]
+                stu_crop_img = result_aligned['aligned_img'][y_stu:y_stu + h_stu, x_stu:x_stu + w_stu]
+                return {
+                    'answer_aligned_img': answer_crop_img,
+                    'stu_aligned_img': stu_crop_img,
+                    'is_error': False
+                }
