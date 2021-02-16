@@ -44,6 +44,7 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
     list_selected.append(chosen_pos)
     print(list_bubble)
     print(list_diff)
+    print(list_selected)
     for pos, diff in enumerate(list_diff):
         # กรณีที่ฝน 2 ช้อย
         if diff <= 60 and pos not in list_selected:
@@ -58,10 +59,10 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
             # if percent >= 45 and diff > 130:
             #     list_selected.remove(pos)
             #     chosen_pos = -1
-            if percent >= 45 and pos != 0 and abs(list_diff[pos]-list_diff[pos-1]) <= 30:
+            if percent >= 45 and pos != 4 and abs(list_diff[pos]-list_diff[pos-1]) <= 30 and abs(list_diff[pos]-list_diff[pos+1]) <= 30:
                 list_selected.remove(pos)
                 chosen_pos = -1
-            if percent >= 45 and pos == 0 and abs(list_diff[pos]-list_diff[pos+1]) <= 30:
+            if percent >= 45 and pos == 4 and abs(list_diff[pos]-list_diff[pos-1]) <= 30 and abs(list_diff[pos]-list_diff[0]) <= 30:
                 list_selected.remove(pos)
                 chosen_pos = -1
 
@@ -165,29 +166,50 @@ def mask_std(std_cnts, img_std_id):
 
 
 def find_std_id(list_bubbled, list_form):
-    chosen_choice = 0
     list_id = []
-    id_pos = -1
-    total_c_form = 0
     for col in range(1, 9):
+        list_selected = []
+        chosen_choice = None
+        chosen_pos = 0
+        total_c_form = 0
+        list_diff = []
+        list_bubble = []
+        print('col: ' + str(col))
         col_choices_list = list(filter(lambda bubbles: bubbles[1] == col, list_bubbled))
         col_choices_form = list(filter(lambda bubbles: bubbles[1] == col, list_form))
         for c_form in col_choices_form:
             total_c_form += c_form[0]
         avg_c = total_c_form / 10
+        for bubble in col_choices_list:
+            diff = (abs(avg_c - bubble[0]))
+            list_bubble.append(bubble[0])
+            list_diff.append(diff)
         for pos, bubble in enumerate(col_choices_list):
-            value = bubble[0]
-            diff = abs(avg_c - bubble[0])
-            if chosen_choice == -1:
-                chosen_choice = value
+            if not chosen_choice:
+                chosen_choice = bubble
+                chosen_pos = pos
                 continue
-            if value > chosen_choice and diff < 60:
-                chosen_choice = bubble[0]
-                id_pos = pos
-        chosen_choice = 1
-        total_c_form = 0
-        if id_pos != -1:
-            list_id.append(id_pos)
+            if bubble[0] >= chosen_choice[0]:
+                chosen_choice = bubble
+                chosen_pos = pos
+        list_selected.append(chosen_pos)
+        print(list_bubble)
+        print(list_diff)
+        for pos, diff in enumerate(list_diff):
+            if diff <= 60 and pos not in list_selected:
+                list_selected.append(pos)
+            elif diff > 60 and pos in list_selected:
+                percent = (list_bubble[pos] / avg_c) * 100
+                print(percent)
+                if percent < 45:
+                    list_selected.remove(pos)
+                if percent >= 45 and pos != 0 and abs(list_diff[pos] - list_diff[pos - 1]) <= 30:
+                    list_selected.remove(pos)
+                if percent >= 45 and pos == 0 and abs(list_diff[pos] - list_diff[pos + 1]) <= 30:
+                    list_selected.remove(pos)
+        print(list_selected)
+        for stu_id in list_selected:
+            list_id.append(stu_id)
     return list_id
 
 

@@ -17,7 +17,7 @@ def mse(imageA, imageB):
     return err
 
 
-def compare_images(imageA, imageB):
+def compare_images(imageA, imageB, feature):
     # compute the mean squared error and structural similarity
     # index for the images
     camera = cv2.adaptiveThreshold(imageB, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
@@ -27,19 +27,26 @@ def compare_images(imageA, imageB):
     camera = cv2.bitwise_not(camera)
     m = mse(imageA, camera)
     s = ssim(imageA, camera)
+    values_compare = {}
     print("MSE: %.2f, SSIM: %.2f" % (m, s))
     # setup the figure
     # fig = plt.figure(title)
-    check_circle = ImgProcess.detect_circle(imageB, 500, 'exam')
-    print(len(check_circle))
-    if m <= 10500 and s >= 0.52 and len(check_circle) >= 500:
-        is_pass = True
-    else:
-        is_pass = False
-    return is_pass
+    # check_circle = ImgProcess.detect_circle(imageB, 500, 'exam')
+    # print(len(check_circle))
+    # if m <= 10500 and s >= 0.52 and len(check_circle) >= 500:
+    #     is_pass = True
+    # else:
+    #     is_pass = False
+    values_compare["MSE"] = m
+    values_compare["SSIM"] = s
+    values_compare["feature"] = feature
+    return {
+        "aligned_value": values_compare,
+        "is_aligned": False
+    }
 
 
-def main_process(aligned_img, form_img):
+def main_process(aligned_img, form_img, max_feature):
     # load the images -- the original, the original + contrast,
     # and the original + photoshop
     original = form_img
@@ -50,5 +57,5 @@ def main_process(aligned_img, form_img):
     camera = cv2.medianBlur(camera, 3)
 
     # compare two images
-    is_aligned = compare_images(original, camera)
+    is_aligned = compare_images(original, camera, max_feature)
     return is_aligned

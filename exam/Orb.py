@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 from exam import Compare
+from exam import MsePaper
 
 GOOD_MATCH_PERCENT = 0.15
 
@@ -72,6 +73,7 @@ def main_process(img_form, img_subject, answer_coords, stu_coords, type_align):
     # orb = cv2.ORB_create(3000)
     # keypoints1, descriptors1 = orb.detectAndCompute(im1blurred, None)
     # keypoints2, descriptors2 = orb.detectAndCompute(im2Gray, None)
+    list_values = []
     while is_loop:
         print("Aligning images ...")
         # print(increase)
@@ -88,8 +90,8 @@ def main_process(img_form, img_subject, answer_coords, stu_coords, type_align):
                 'is_error': True
             }
         else:
-            is_aligned_pass = Compare.main_process(result_aligned['aligned_img'], imReference)
-            if is_aligned_pass:
+            is_aligned_pass = Compare.main_process(result_aligned['aligned_img'], imReference, increase+1000)
+            if is_aligned_pass["is_aligned"]:
                 # Print estimated homography
                 print("Estimated homography : \n", result_aligned['h'])
                 x_ans = int(answer_coords['x'])
@@ -111,5 +113,36 @@ def main_process(img_form, img_subject, answer_coords, stu_coords, type_align):
                     'is_error': False
                 }
             else:
+                if (1000 + increase) == 5000:
+                    is_loop = False
+                list_values.append(is_aligned_pass["aligned_value"])
                 increase += 100
                 print("re-aligned")
+    result_selected = MsePaper.main(list_values)
+    print(result_selected["feature"])
+    orb = cv2.ORB_create(result_selected["feature"])
+    keypoints1, descriptors1 = orb.detectAndCompute(im1Gray, None)
+    keypoints2, descriptors2 = orb.detectAndCompute(im2Gray, None)
+    result_aligned = alignImages(im, imReference, 'std', increase, descriptors1, descriptors2, keypoints1,
+                                 keypoints2)
+    if result_aligned['is_error']:
+        return {
+            'error_msg': result_aligned['error_msg'],
+            'is_error': True
+        }
+    else:
+        x_ans = int(answer_coords['x'])
+        y_ans = int(answer_coords['y'])
+        w_ans = int(answer_coords['width'])
+        h_ans = int(answer_coords['height'])
+        x_stu = int(stu_coords['x'])
+        y_stu = int(stu_coords['y'])
+        w_stu = int(stu_coords['width'])
+        h_stu = int(stu_coords['height'])
+        answer_crop_img = result_aligned['aligned_img'][y_ans:y_ans + h_ans, x_ans:x_ans + w_ans]
+        stu_crop_img = result_aligned['aligned_img'][y_stu:y_stu + h_stu, x_stu:x_stu + w_stu]
+        return {
+            'answer_aligned_img': answer_crop_img,
+            'stu_aligned_img': stu_crop_img,
+            'is_error': False
+        }
