@@ -17,9 +17,10 @@ def mse(imageA, imageB):
     return err
 
 
-def compare_images(imageA, imageB, feature):
+def compare_images(imageA, imageB, feature, rounds):
     # compute the mean squared error and structural similarity
     # index for the images
+    is_pass = False
     camera = cv2.adaptiveThreshold(imageB, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY_INV, 71, 2 | cv2.THRESH_OTSU)
     kernel = np.ones((1, 1), np.uint8)
@@ -29,24 +30,27 @@ def compare_images(imageA, imageB, feature):
     s = ssim(imageA, camera)
     values_compare = {}
     print("MSE: %.2f, SSIM: %.2f" % (m, s))
-    # setup the figure
-    # fig = plt.figure(title)
-    # check_circle = ImgProcess.detect_circle(imageB, 500, 'exam')
-    # print(len(check_circle))
-    # if m <= 10500 and s >= 0.52 and len(check_circle) >= 500:
-    #     is_pass = True
-    # else:
-    #     is_pass = False
-    values_compare["MSE"] = m
-    values_compare["SSIM"] = s
-    values_compare["feature"] = feature
+    if rounds == 1:
+        values_compare["MSE"] = m
+        values_compare["SSIM"] = s
+        values_compare["feature"] = feature
+    if rounds == 2:
+        values_compare["MSE"] = m
+        values_compare["SSIM"] = s
+        values_compare["feature"] = feature
+    elif rounds == 3:
+        check_circle = ImgProcess.detect_circle(imageB, 500, 'exam')
+        if m <= 10500 and s >= 0.52 and len(check_circle) >= 500:
+            is_pass = True
+        else:
+            is_pass = False
     return {
         "aligned_value": values_compare,
-        "is_aligned": False
+        "is_aligned": is_pass
     }
 
 
-def main_process(aligned_img, form_img, max_feature):
+def main_process(aligned_img, form_img, max_feature, rounds):
     # load the images -- the original, the original + contrast,
     # and the original + photoshop
     original = form_img
@@ -57,5 +61,5 @@ def main_process(aligned_img, form_img, max_feature):
     camera = cv2.medianBlur(camera, 3)
 
     # compare two images
-    is_aligned = compare_images(original, camera, max_feature)
+    is_aligned = compare_images(original, camera, max_feature, rounds)
     return is_aligned
