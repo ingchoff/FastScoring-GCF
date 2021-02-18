@@ -50,16 +50,16 @@ def img_process(event, context):
         exam_ref.set({
             'status': 'aligning'
         }, merge=True)
-        img_aligned = Orb.main_process(form_tmp_path, subject_tmp_path, data_form['answer_sheet_coords'], data_form['student_coords'], 'answer')
+        img_aligned = Orb.main_process(form_tmp_path, subject_tmp_path, data_form['answer_sheet_coords'], data_form['student_coords'], 'answer', 1)
         # img_aligned = Sift.main_process(form_tmp_path, subject_tmp_path, 'answer')
         # imgstd_aligned = Sift.main_process(formstd_tmp_path, subject_tmp_path, 'std')
         if not img_aligned['is_error']:
             exam_ref.set({
                 'status': 'scoring'
             }, merge=True)
-            result = ImgProcess.main_process(form_tmp_path, img_aligned['answer_aligned_img'], '',
-                                             img_aligned['stu_aligned_img'],
-                                             data_quiz, data_form['column'], data_form['amount'], data_form['student_coords'], data_form['answer_sheet_coords'])
+            result = ImgProcess.main_process(form_tmp_path, subject_tmp_path, img_aligned['answer_aligned_img'], img_aligned['stu_aligned_img'],
+                                             data_quiz, data_form['column'], data_form['amount'], data_form['num_choice'],
+                                             data_form['stu_column'], data_form['student_coords'], data_form['answer_sheet_coords'])
             if not result['is_error']:
                 bound_img_rgb = cv2.cvtColor(result['result_img'], cv2.COLOR_BGR2RGB)
                 result_img = Image.fromarray(bound_img_rgb)
@@ -193,7 +193,8 @@ def find_solve(list_folder, qid, quiz_type, filename):
             'detail': 'analysing',
             'solve': {}
         }, merge=True)
-        result_solve = FindAnswer.main_process(form_tmp_path, img_aligned['answer_aligned_img'], data_quiz, data_form['amount'], data_form['column'], data_form['answer_sheet_coords'])
+        result_solve = FindAnswer.main_process(form_tmp_path, img_aligned['answer_aligned_img'], data_quiz, data_form['amount'],
+                                               data_form['column'], data_form['answer_sheet_coords'], data_form['num_choice'])
         if 'img_solve' in result_solve:
             bound_img_rgb = cv2.cvtColor(result_solve['img_solve'], cv2.COLOR_BGR2RGB)
             analysed_img = Image.fromarray(bound_img_rgb)
@@ -244,7 +245,7 @@ def coords(data, context):
         print(data['value']['fields']['answer_status'])
         if data['value']['fields']['answer_status']['stringValue'] == 'pending' \
                 or data['value']['fields']['answer_status']['stringValue'] == 'resend':
-            print(data['value']['fields']['answer_sheet_coords']['mapValue']['fields'])
+            print(data['value']['fields']['num_choice']['integerValue'])
             answer_coords = data['value']['fields']['answer_sheet_coords']['mapValue']['fields']
             form_tmp_path = os.path.join(tempfile.gettempdir(), 'form_tmp.jpg')
             owner = data['value']['fields']['owner']['stringValue']
@@ -280,7 +281,7 @@ def coords(data, context):
                 'answer_status': 'analysing'
             }, merge=True)
             is_available_answer = CheckForm.main_process(crop_img_answer, data['value']['fields']['column']['integerValue'],
-                                                         data['value']['fields']['amount']['integerValue'], 'answer')
+                                                         data['value']['fields']['amount']['integerValue'], 'answer', data['value']['fields']['num_choice']['integerValue'])
             if is_available_answer['available']:
                 bound_img_rgb = cv2.cvtColor(is_available_answer['bound_img'], cv2.COLOR_BGR2RGB)
                 analysed_img = Image.fromarray(bound_img_rgb)
@@ -336,7 +337,8 @@ def coords(data, context):
             form_ref.set({
                 'stu_status': 'analysing'
             }, merge=True)
-            is_available_stu = CheckForm.main_process(crop_img_stu, data['value']['fields']['stu_column']['integerValue'], data['value']['fields']['amount']['integerValue'], 'stu')
+            is_available_stu = CheckForm.main_process(crop_img_stu, data['value']['fields']['stu_column']['integerValue'],
+                                                      data['value']['fields']['amount']['integerValue'], 'stu', 0)
             if is_available_stu['available']:
                 bound_img_rgb = cv2.cvtColor(is_available_stu['bound_img'], cv2.COLOR_BGR2RGB)
                 analysed_img = Image.fromarray(bound_img_rgb)

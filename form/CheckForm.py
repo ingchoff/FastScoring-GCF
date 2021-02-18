@@ -15,7 +15,7 @@ def find_contour_circle(form_img, num_choices):
         peri = cv2.arcLength(c, True)
         approx = cv2.approxPolyDP(c, 0.03 * peri, True)
         (x, y, w, h) = cv2.boundingRect(c)
-        if 15 <= w <= 50 and 15 <= h <= 50 \
+        if 10 <= w <= 50 and 10 <= h <= 50 \
                 and len(approx) != 3 and len(approx) != 4 and len(approx) != 5:
             list_circle.append(c)
     print(len(list_circle))
@@ -29,22 +29,21 @@ def find_contour_circle(form_img, num_choices):
             'list_circle_after': list_circle_after}
 
 
-def main_process(form_img, column, amount, form_type):
-    available = False
+def main_process(form_img, column, amount, form_type, num_choice):
     form = form_img
     if form_type == "answer":
         row = int(int(amount) / int(column))
         form_gray = cv2.cvtColor(form, cv2.COLOR_BGR2GRAY)
         # still fixed choice each question = 5
-        circle_cnts = find_contour_circle(form_gray, 5*int(column)*int(row))
+        print(num_choice)
+        circle_cnts = find_contour_circle(form_gray, int(num_choice)*int(column)*int(row))
         choices_cnts = contours.sort_contours(circle_cnts['list_circle_after'], method="top-to-bottom")[0]
         cv2.drawContours(form, choices_cnts, -1, (0, 0, 255), 2)
         # check this form is compatible with system.
-        if len(circle_cnts['list_circle_after']) == int(amount)*5:
-            available = True
+        if len(circle_cnts['list_circle_after']) == int(amount)*int(num_choice):
             return {
                 'bound_img': form,
-                'available': available
+                'available': True
             }
         else:
             return {
@@ -56,11 +55,10 @@ def main_process(form_img, column, amount, form_type):
         circle_cnts = find_contour_circle(form_gray, row*int(column))
         choices_cnts = contours.sort_contours(circle_cnts['list_circle_after'], method="top-to-bottom")[0]
         cv2.drawContours(form, choices_cnts, -1, (0, 0, 255), 2)
-        if len(circle_cnts['list_circle_after']) == row*int(column) and len(circle_cnts['list_circle']) == 160:
-            available = True
+        if len(circle_cnts['list_circle_after']) == row*int(column):
             return {
                 'bound_img': form,
-                'available': available
+                'available': True
             }
         else:
             return {

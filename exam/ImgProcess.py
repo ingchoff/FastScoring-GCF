@@ -2,6 +2,7 @@ import imutils
 import numpy as np
 from imutils import contours
 import cv2
+from exam import Orb
 
 
 # input question_no to return first index of choice each of questions
@@ -291,7 +292,7 @@ def mask_choices_bubbled(choice_contours, bound_img, col):
     return list_bubbled
 
 
-def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amount, stu_coords, answer_coords):
+def main_process(form_img, subject_tmp_path, subject_img, std_img, quiz, column, amount, num_choice, stu_col, stu_coords, answer_coords):
     image = cv2.imread(form_img)
     x_ans = int(answer_coords['x'])
     y_ans = int(answer_coords['y'])
@@ -303,23 +304,43 @@ def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amo
     h_stu = int(stu_coords['height'])
     answer_form = image[y_ans:y_ans + h_ans, x_ans:x_ans + w_ans]
     std_form = image[y_stu:y_stu + h_stu, x_stu:x_stu + w_stu]
-    # std_form = cv2.imread(form_std_img)
     subject = subject_img
     std_image = std_img
     std_image_gray = cv2.cvtColor(std_image, cv2.COLOR_BGR2GRAY)
     std_form_gray = cv2.cvtColor(std_form, cv2.COLOR_BGR2GRAY)
     check_std_cnts = detect_circle(std_image_gray, 1000, 'std')
-    if len(check_std_cnts) >= 80:
-        stdCnts = detect_circle(std_form_gray, 80, 'std')
+    std_id = ''
+    if len(check_std_cnts) >= 10*stu_col:
+        stdCnts = detect_circle(std_form_gray, 10*stu_col, 'std')
         new_std_img = subtract_img(stdCnts, std_image_gray, std_form, 'std')
         boundStdImg = cv2.drawContours(new_std_img['new_sub'], stdCnts, -1, (255, 255, 255), 1)
-        circleStd = find_circle_contour(boundStdImg, 80)
+        circleStd = find_circle_contour(boundStdImg, 10*stu_col)
         list_std_form = mask_std(stdCnts, new_std_img['new_marker_gray'])
         list_std_bubbled = mask_std(circleStd, boundStdImg)
         list_std_id = find_std_id(list_std_bubbled, list_std_form)
-        if len(list_std_id) == 8:
+        if len(list_std_id) == stu_col:
             std_id = ''.join(map(str, list_std_id))
             print(std_id)
+        elif 1 <= stu_col - len(list_std_id) <= 7:
+            img_aligned = Orb.main_process(form_img, subject_tmp_path, answer_coords, stu_coords, 'answer', 2)
+            std_image = img_aligned['stu_aligned_img']
+            subject = img_aligned['answer_aligned_img']
+            std_image_gray = cv2.cvtColor(std_image, cv2.COLOR_BGR2GRAY)
+            std_form_gray = cv2.cvtColor(std_form, cv2.COLOR_BGR2GRAY)
+            check_std_cnts = detect_circle(std_image_gray, 1000, 'std')
+            if len(check_std_cnts) >= 10 * stu_col:
+                stdCnts = detect_circle(std_form_gray, 10 * stu_col, 'std')
+                new_std_img = subtract_img(stdCnts, std_image_gray, std_form, 'std')
+                boundStdImg = cv2.drawContours(new_std_img['new_sub'], stdCnts, -1, (255, 255, 255), 1)
+                circleStd = find_circle_contour(boundStdImg, 10 * stu_col)
+                list_std_form = mask_std(stdCnts, new_std_img['new_marker_gray'])
+                list_std_bubbled = mask_std(circleStd, boundStdImg)
+                list_std_id = find_std_id(list_std_bubbled, list_std_form)
+                if len(list_std_id) == stu_col:
+                    std_id = ''.join(map(str, list_std_id))
+                    print(std_id)
+                else:
+                    std_id = 'ไม่ได้ฝนรหัสนักศึกษา'
         else:
             std_id = 'ไม่ได้ฝนรหัสนักศึกษา'
     else:
@@ -327,11 +348,11 @@ def main_process(form_img, subject_img, form_std_img, std_img, quiz, column, amo
     gray = cv2.cvtColor(answer_form, cv2.COLOR_BGR2GRAY)
     subject_gray = cv2.cvtColor(subject, cv2.COLOR_BGR2GRAY)
     check_ans_cnts = detect_circle(subject_gray, 1000, 'answer')
-    if len(check_ans_cnts) >= amount*5:
-        questionCnts = detect_circle(gray, amount*5, 'answer')
+    if len(check_ans_cnts) >= amount*num_choice:
+        questionCnts = detect_circle(gray, amount*num_choice, 'answer')
         new_subject_image = subtract_img(questionCnts, subject_gray, answer_form, 'answer')
         boundImg = cv2.drawContours(new_subject_image['new_sub'].copy(), questionCnts, -1, (255, 255, 255), 1)
-        choicesCnts = find_circle_contour(boundImg, amount*5)
+        choicesCnts = find_circle_contour(boundImg, amount*num_choice)
         list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg, column)
         dict_c_form = mask_choices_bubbled(questionCnts, new_subject_image['new_marker_gray'], column)
 
