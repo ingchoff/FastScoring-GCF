@@ -141,34 +141,39 @@ def detect_circle(img_gray, num_choices, type_img):
     return questionCnts
 
 
-def mask_std(std_cnts, img_std_id):
+def mask_std(std_cnts, img_std_id, stu_col):
     stdCnts = contours.sort_contours(std_cnts, method="top-to-bottom")[0]
     list_bubbled = []
-    for (q, i) in enumerate(np.arange(0, len(stdCnts), 8)):
-        cnts = contours.sort_contours(stdCnts[i:i + 8])[0]
+    for (q, i) in enumerate(np.arange(0, len(stdCnts), stu_col)):
+        cnts = contours.sort_contours(stdCnts[i:i + stu_col])[0]
         for (j, c) in enumerate(cnts):
             mask = np.zeros(img_std_id.shape, dtype="uint8")
             cv2.drawContours(mask, [c], -1, 255, -1)
             mask = cv2.bitwise_or(img_std_id, img_std_id, mask=mask)
             total = cv2.countNonZero(mask)
             pos_choice = i + j + 1
-            col = (1 if pos_choice % 8 == 1 else
-                   2 if pos_choice % 8 == 2 else
-                   3 if pos_choice % 8 == 3 else
-                   4 if pos_choice % 8 == 4 else
-                   5 if pos_choice % 8 == 5 else
-                   6 if pos_choice % 8 == 6 else
-                   7 if pos_choice % 8 == 7 else
-                   8)
-            bubbled = (total, col, pos_choice)
-            list_bubbled.append(bubbled)
+            if stu_col == 8:
+                col = (1 if pos_choice % stu_col == 1 else
+                       2 if pos_choice % stu_col == 2 else
+                       3 if pos_choice % stu_col == 3 else
+                       4 if pos_choice % stu_col == 4 else
+                       5 if pos_choice % stu_col == 5 else
+                       6 if pos_choice % stu_col == 6 else
+                       7 if pos_choice % stu_col == 7 else
+                       8)
+                bubbled = (total, col, pos_choice)
+                list_bubbled.append(bubbled)
+            else:
+                col = (1 if pos_choice % stu_col == 1 else 2)
+                bubbled = (total, col, pos_choice)
+                list_bubbled.append(bubbled)
     print(len(list_bubbled))
     return list_bubbled
 
 
-def find_std_id(list_bubbled, list_form):
+def find_std_id(list_bubbled, list_form, stu_col):
     list_id = []
-    for col in range(1, 9):
+    for col in range(1, stu_col+1):
         list_selected = []
         chosen_choice = None
         chosen_pos = 0
@@ -315,9 +320,9 @@ def main_process(form_img, subject_tmp_path, subject_img, std_img, quiz, column,
         new_std_img = subtract_img(stdCnts, std_image_gray, std_form, 'std')
         boundStdImg = cv2.drawContours(new_std_img['new_sub'], stdCnts, -1, (255, 255, 255), 1)
         circleStd = find_circle_contour(boundStdImg, 10*stu_col)
-        list_std_form = mask_std(stdCnts, new_std_img['new_marker_gray'])
-        list_std_bubbled = mask_std(circleStd, boundStdImg)
-        list_std_id = find_std_id(list_std_bubbled, list_std_form)
+        list_std_form = mask_std(stdCnts, new_std_img['new_marker_gray'], stu_col)
+        list_std_bubbled = mask_std(circleStd, boundStdImg, stu_col)
+        list_std_id = find_std_id(list_std_bubbled, list_std_form, stu_col)
         if len(list_std_id) == stu_col:
             std_id = ''.join(map(str, list_std_id))
             print(std_id)
@@ -333,9 +338,9 @@ def main_process(form_img, subject_tmp_path, subject_img, std_img, quiz, column,
                 new_std_img = subtract_img(stdCnts, std_image_gray, std_form, 'std')
                 boundStdImg = cv2.drawContours(new_std_img['new_sub'], stdCnts, -1, (255, 255, 255), 1)
                 circleStd = find_circle_contour(boundStdImg, 10 * stu_col)
-                list_std_form = mask_std(stdCnts, new_std_img['new_marker_gray'])
-                list_std_bubbled = mask_std(circleStd, boundStdImg)
-                list_std_id = find_std_id(list_std_bubbled, list_std_form)
+                list_std_form = mask_std(stdCnts, new_std_img['new_marker_gray'], stu_col)
+                list_std_bubbled = mask_std(circleStd, boundStdImg, stu_col)
+                list_std_id = find_std_id(list_std_bubbled, list_std_form, stu_col)
                 if len(list_std_id) == stu_col:
                     std_id = ''.join(map(str, list_std_id))
                     print(std_id)

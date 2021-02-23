@@ -185,7 +185,7 @@ def find_solve(list_folder, qid, quiz_type, filename):
         'solution_status': 'process',
         'detail': 'aligning'
     }, merge=True)
-    img_aligned = Orb.main_process(form_tmp_path, solve_tmp_path, data_form['answer_sheet_coords'], data_form['student_coords'], 'answer')
+    img_aligned = Orb.main_process(form_tmp_path, solve_tmp_path, data_form['answer_sheet_coords'], data_form['student_coords'], 'answer', 1)
     # img_aligned = Sift.main_process(form_tmp_path, solve_tmp_path, 'answer')
     if 'answer_aligned_img' in img_aligned:
         quiz_ref.set({
