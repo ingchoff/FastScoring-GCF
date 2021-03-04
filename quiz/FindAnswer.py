@@ -25,12 +25,14 @@ def calulate_score(questions_no, answersheet, subject_img, amount, col, dic_c_fo
     total_c_form = 0
     list_diff = []
     list_selected = []
+    list_bubble = []
     for i, c_form in enumerate(form_choice):
         total_c_form += c_form[0]
     avg = int(total_c_form / 5)
     for bubble in answer_choice:
         diff = (abs(avg - bubble[0]))
         list_diff.append(diff)
+        list_bubble.append(bubble[0])
     for pos, bubble in enumerate(answer_choice):
         if not chosen_choice:
             chosen_choice = bubble
@@ -40,12 +42,22 @@ def calulate_score(questions_no, answersheet, subject_img, amount, col, dic_c_fo
             chosen_choice = bubble
             chosen_pos = pos
     list_selected.append(chosen_pos)
+    print(list_bubble)
+    print(list_diff)
+    print(list_selected)
     for pos, diff in enumerate(list_diff):
         if diff <= 60 and pos not in list_selected:
             list_selected.append(pos)
         elif diff > 60 and pos in list_selected:
-            list_selected.remove(pos)
-            chosen_pos = -1
+            percent = (list_bubble[pos] / avg) * 100
+            print(percent)
+            if percent <= 45:
+                list_selected.remove(pos)
+            if percent > 45 and pos != 4 and abs(list_diff[pos]-list_diff[pos-1]) <= 42 and abs(list_diff[pos]-list_diff[pos+1]) <= 42:
+                list_selected.remove(pos)
+            if percent > 45 and pos == 4 and abs(list_diff[pos]-list_diff[pos-1]) <= 42 and abs(list_diff[pos]-list_diff[0]) <= 42:
+                list_selected.remove(pos)
+    print(list_selected)
     solve_pos = draw_answer(subject_img, sorted(list_selected), answer_choice)
     return {
         'position_solve': solve_pos

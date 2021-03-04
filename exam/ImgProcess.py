@@ -54,16 +54,16 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
         elif diff > 60 and pos in list_selected:
             percent = (list_bubble[pos] / avg) * 100
             print(percent)
-            if percent < 45:
+            if percent <= 45:
                 list_selected.remove(pos)
                 chosen_pos = -1
             # if percent >= 45 and diff > 130:
             #     list_selected.remove(pos)
             #     chosen_pos = -1
-            if percent >= 45 and pos != 4 and abs(list_diff[pos]-list_diff[pos-1]) <= 30 and abs(list_diff[pos]-list_diff[pos+1]) <= 30:
+            if percent > 45 and pos != 4 and abs(list_diff[pos]-list_diff[pos-1]) <= 42 and abs(list_diff[pos]-list_diff[pos+1]) <= 42:
                 list_selected.remove(pos)
                 chosen_pos = -1
-            if percent >= 45 and pos == 4 and abs(list_diff[pos]-list_diff[pos-1]) <= 30 and abs(list_diff[pos]-list_diff[0]) <= 30:
+            if percent > 45 and pos == 4 and abs(list_diff[pos]-list_diff[pos-1]) <= 42 and abs(list_diff[pos]-list_diff[0]) <= 42:
                 list_selected.remove(pos)
                 chosen_pos = -1
 
@@ -152,21 +152,11 @@ def mask_std(std_cnts, img_std_id, stu_col):
             mask = cv2.bitwise_or(img_std_id, img_std_id, mask=mask)
             total = cv2.countNonZero(mask)
             pos_choice = i + j + 1
-            if stu_col == 8:
-                col = (1 if pos_choice % stu_col == 1 else
-                       2 if pos_choice % stu_col == 2 else
-                       3 if pos_choice % stu_col == 3 else
-                       4 if pos_choice % stu_col == 4 else
-                       5 if pos_choice % stu_col == 5 else
-                       6 if pos_choice % stu_col == 6 else
-                       7 if pos_choice % stu_col == 7 else
-                       8)
-                bubbled = (total, col, pos_choice)
-                list_bubbled.append(bubbled)
-            else:
-                col = (1 if pos_choice % stu_col == 1 else 2)
-                bubbled = (total, col, pos_choice)
-                list_bubbled.append(bubbled)
+            col = pos_choice % stu_col
+            if col == 0:
+                col = stu_col
+            bubbled = (total, col, pos_choice)
+            list_bubbled.append(bubbled)
     print(len(list_bubbled))
     return list_bubbled
 
