@@ -13,5 +13,6 @@
 .git
 .gitignore
 venv
+MainTest.py
 
 node_modules

@@ -32,6 +32,7 @@ def find_contour_circle(form_img, num_choices):
 def main_process(form_img, column, amount, form_type, num_choice):
     form = form_img
     if form_type == "answer":
+        coords_choices = {}
         row = int(int(amount) / int(column))
         form_gray = cv2.cvtColor(form, cv2.COLOR_BGR2GRAY)
         # still fixed choice each question = 5
@@ -39,11 +40,17 @@ def main_process(form_img, column, amount, form_type, num_choice):
         circle_cnts = find_contour_circle(form_gray, int(num_choice)*int(column)*int(row))
         choices_cnts = contours.sort_contours(circle_cnts['list_circle_after'], method="top-to-bottom")[0]
         cv2.drawContours(form, choices_cnts, -1, (0, 0, 255), 2)
+        for (q, i) in enumerate(np.arange(0, len(choices_cnts), int(num_choice)*int(column))):
+            cnts = contours.sort_contours(choices_cnts[i:i + int(num_choice) * int(column)])[0]
+            for (j, c) in enumerate(cnts):
+                (x, y, w, h) = cv2.boundingRect(c)
+                coords_choices[str(i+j+1)] = {'x': x, 'y': y}
         # check this form is compatible with system.
         if len(circle_cnts['list_circle_after']) == int(amount)*int(num_choice):
             return {
                 'bound_img': form,
-                'available': True
+                'available': True,
+                'coords_choices': coords_choices
             }
         else:
             return {

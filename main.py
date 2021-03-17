@@ -289,9 +289,11 @@ def coords(data, context):
                 analysed_blob = bucket.blob('forms/' + owner + '/analysed_' + list_resource[6] + '_' + 'answersheet.jpg')
                 analysed_blob.upload_from_filename(os.path.join(tempfile.gettempdir(), 'analysed.jpg'),
                                                    content_type='image/jpeg')
+                print(is_available_answer['coords_choices'])
                 form_ref.set({
                     'answer_status': 'pass',
-                    'analysed_answersheet_path': 'forms/' + data['value']['fields']['owner']['stringValue'] + '/analysed_' + list_resource[6] + '_' + 'answersheet.jpg'
+                    'analysed_answersheet_path': 'forms/' + data['value']['fields']['owner']['stringValue'] + '/analysed_' + list_resource[6] + '_' + 'answersheet.jpg',
+                    'coords_choices': is_available_answer['coords_choices']
                 }, merge=True)
             else:
                 form_ref.set({
