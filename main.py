@@ -74,7 +74,8 @@ def img_process(event, context):
                     'path_result': 'result/' + list_folder[1] + '/result_' + list_folder[3],
                     'status': 'done',
                     'result': result['result'],
-                    'score': result['score']
+                    'score': result['score'],
+                    'coords_choices': result['coords_choices']
                 }, merge=True)
                 os.remove(os.path.join(tempfile.gettempdir(), 'result.jpg'))
             else:

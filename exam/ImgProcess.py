@@ -82,23 +82,23 @@ def draw_answer(question_no, img, keys, list_pos, list_answer_choice):
     choice = 0
     for i, correct_ans in sorted(keys.items()):
         if correct_ans - 1 in list_pos and int(i) == question_no and len(list_pos) == 1:
-            cv2.drawContours(img, [list_answer_choice[list_pos[0]][2]], -1, (0, 255, 0), 2)
+            # cv2.drawContours(img, [list_answer_choice[list_pos[0]][2]], -1, (0, 255, 0), 2)
             is_correct = True
             choice = correct_ans
         elif correct_ans - 1 in list_pos and int(i) == question_no and len(list_pos) > 1:
-            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
+            # cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
             is_correct = False
             choice = correct_ans
         elif correct_ans - 1 not in list_pos and int(i) == question_no and len(list_pos) == 1:
-            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
+            # cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
             is_correct = False
             choice = correct_ans
         elif correct_ans - 1 not in list_pos and int(i) == question_no and len(list_pos) > 1:
-            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
+            # cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
             is_correct = False
             choice = correct_ans
         elif correct_ans - 1 not in list_pos and int(i) == question_no and len(list_pos) < 1:
-            cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
+            # cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
             is_correct = False
             choice = correct_ans
     return {
@@ -340,17 +340,24 @@ def main_process(form_img, subject_tmp_path, subject_img, std_img, quiz, column,
             std_id = 'ไม่ได้ฝนรหัสนักศึกษา'
     else:
         std_id = 'ไม่สามารถตรวจรหัสนศ.ได้เพราะ align รูปส่วนฝนรหัสนศ.ได้ไม่ถูกต้อง'
+    coords_choices = {}
     gray = cv2.cvtColor(answer_form, cv2.COLOR_BGR2GRAY)
     subject_gray = cv2.cvtColor(subject, cv2.COLOR_BGR2GRAY)
     check_ans_cnts = detect_circle(subject_gray, 1000, 'answer')
     if len(check_ans_cnts) >= amount*num_choice:
         questionCnts = detect_circle(gray, amount*num_choice, 'answer')
+        circle_choices = detect_circle(subject_gray, amount * num_choice, 'answer')
         new_subject_image = subtract_img(questionCnts, subject_gray, answer_form, 'answer')
         boundImg = cv2.drawContours(new_subject_image['new_sub'].copy(), questionCnts, -1, (255, 255, 255), 1)
         choicesCnts = find_circle_contour(boundImg, amount*num_choice)
         list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg, column)
         dict_c_form = mask_choices_bubbled(questionCnts, new_subject_image['new_marker_gray'], column)
-
+        choices_cnts = contours.sort_contours(circle_choices, method="top-to-bottom")[0]
+        for (q, i) in enumerate(np.arange(0, len(choices_cnts), int(num_choice) * int(column))):
+            cnts = contours.sort_contours(choices_cnts[i:i + int(num_choice) * int(column)])[0]
+            for (j, c) in enumerate(cnts):
+                (x, y, w, h) = cv2.boundingRect(c)
+                coords_choices[str(i + j + 1)] = {'x': x, 'y': y}
         # loop for calculate score
         keys = quiz['solve']
         dict_result = {}
@@ -366,7 +373,8 @@ def main_process(form_img, subject_tmp_path, subject_img, std_img, quiz, column,
             'std_id': std_id,
             'result_img': subject,
             'result': dict_result,
-            'score': score
+            'score': score,
+            'coords_choices': coords_choices
         }
     else:
         return {
