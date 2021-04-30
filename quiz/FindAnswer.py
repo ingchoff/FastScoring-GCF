@@ -66,16 +66,27 @@ def calulate_score(questions_no, answersheet, subject_img, amount, col, dic_c_fo
 
 # draw choices with correct answer each questions
 def draw_answer(img, list_pos, list_answer_choice):
-    solve_pos = -1
-    if len(list_pos) == 1:
-        solve_pos = list_pos[0]
-        cv2.drawContours(img, [list_answer_choice[solve_pos][2]], -1, (0, 255, 0), 2)
-    return solve_pos + 1
-
+    # solve_pos = -1
+    solve_pos = []
+    for count, pos in enumerate(list_pos):
+        solve_pos.append(pos + 1)
+        cv2.drawContours(img, [list_answer_choice[pos][2]], -1, (0, 255, 0), 2)
+    # if len(list_pos) == 1:
+    #     # solve_pos = list_pos[0]
+    #     solve_pos.append(list_pos[0] + 1)
+    #     cv2.drawContours(img, [list_answer_choice[solve_pos][2]], -1, (0, 255, 0), 2)
+    # elif len(list_pos) > 1:
+    #     for count, pos in enumerate(list_pos):
+    #         # solve_pos = pos
+    #         solve_pos.append(pos + 1)
+    #         cv2.drawContours(img, [list_answer_choice[solve_pos][2]], -1, (0, 255, 0), 2)
+    # return solve_pos + 1
+    return solve_pos
 
 def detect_circle(img_gray, num_choices):
     thresh = cv2.adaptiveThreshold(img_gray, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY_INV, 71, 2 | cv2.THRESH_OTSU)
+    # cv2.imshow('th', thresh)
     # หา contour ที่เป็น choices คำตอบทั้งหมด
     contour = cv2.findContours(thresh, cv2.RETR_LIST, cv2.CHAIN_APPROX_SIMPLE)
     contour = imutils.grab_contours(contour)
@@ -197,9 +208,10 @@ def main_process(form_img, subject_img, quiz, amount_choices, column, coords, nu
         dict_result = {}
         for i in range(1, quiz['amount']+1):
             result = calulate_score(i, list_choices_bubbled, subject, amount_choices, column, dict_c_form)
-            if result['position_solve'] > 0:
+            if len(result['position_solve']) > 0:
                 dict_result[str(i)] = result['position_solve']
         return {
+            'is_error': False,
             'result_solve': dict_result,
             'img_solve': subject
         }

@@ -9,7 +9,7 @@ import json
 from exam import ImgProcess, Sift
 from form import CheckForm
 from quiz import FindAnswer
-from exam import Orb
+from exam import Orb, Scoring
 
 gcs = storage.Client()
 bucket = gcs.get_bucket(os.environ['CLOUD_STORAGE_BUCKET'])
@@ -359,3 +359,17 @@ def coords(data, context):
                     'stu_status': 'error'
                 }, merge=True)
             os.remove(form_tmp_path)
+    if list_resource[5] == 'quizzes':
+        quiz_ref = db.collection('quizzes').document(list_resource[6])
+        query_exam_ref = db.collection('exams').where("quiz", "==", quiz_ref)
+        if not data['value']['fields'].get('multiple_choice'):
+            return
+        type_multiple = data['value']['fields']['multiple_choice']['stringValue']
+        print(type_multiple)
+        point_per_clause = data['value']['fields']['point_per_clause']['integerValue']
+        print(point_per_clause)
+        # exam_ref.set({
+        #     'status': 'scoring'
+        # })
+        # Scoring.main_process()
+

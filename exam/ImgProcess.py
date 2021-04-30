@@ -2,7 +2,7 @@ import imutils
 import numpy as np
 from imutils import contours
 import cv2
-from exam import Orb
+from exam import Orb, Scoring
 
 
 # input question_no to return first index of choice each of questions
@@ -17,7 +17,7 @@ def choice_to_bubble(choice, amount, col):
 
 
 # check to index of bubble choice each questions
-def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, col, dic_c_form):
+def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, col, dic_c_form, point_per_clause, type_multiple):
     first_bubble = choice_to_bubble(questions_no, amount, col)
     answer_choice = list(filter(lambda bubbles: first_bubble + 4 >= bubbles[1] >= first_bubble, answersheet))
     form_choice = list(filter(lambda bubbles: first_bubble + 4 >= bubbles[1] >= first_bubble, dic_c_form))
@@ -68,42 +68,68 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
                 chosen_pos = -1
 
     print(list_selected)
-    correct = draw_answer(questions_no, subject_img, answer_keys, sorted(list_selected), answer_choice)
+    correct = draw_answer(questions_no, answer_keys, sorted(list_selected), point_per_clause, type_multiple)
     return {
-        'user_choice': chosen_pos + 1,
+        'user_choice': [x+1 for x in list_selected],
         'correct': correct['is_correct'],
-        'correct_choice': correct['ans_choice']
+        'correct_choice': correct['ans_choice'],
+        'score_per_question': correct['score']
     }
 
 
 # draw choices with correct answer each questions
-def draw_answer(question_no, img, keys, list_pos, list_answer_choice):
+def draw_answer(question_no, keys, list_pos, point_per_clause, type_multiple):
+    list_pos = [x+1 for x in list_pos]
     is_correct = False
-    choice = 0
+    choice = []
+    score = 0
     for i, correct_ans in sorted(keys.items()):
-        if correct_ans - 1 in list_pos and int(i) == question_no and len(list_pos) == 1:
-            # cv2.drawContours(img, [list_answer_choice[list_pos[0]][2]], -1, (0, 255, 0), 2)
+        if len(correct_ans) == 1 and list_pos == correct_ans and int(i) == question_no:
             is_correct = True
             choice = correct_ans
-        elif correct_ans - 1 in list_pos and int(i) == question_no and len(list_pos) > 1:
-            # cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
+            score = Scoring.main_process(len(correct_ans), point_per_clause, type_multiple, 1)
+        elif len(correct_ans) > 1 and list_pos == correct_ans and int(i) == question_no:
+            is_correct = True
+            choice = correct_ans
+            score = Scoring.main_process(len(correct_ans), point_per_clause, type_multiple, 1)
+        elif len(correct_ans) == 1 and list_pos != correct_ans and int(i) == question_no:
             is_correct = False
             choice = correct_ans
-        elif correct_ans - 1 not in list_pos and int(i) == question_no and len(list_pos) == 1:
-            # cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
+        elif len(correct_ans) > 1 and list_pos != correct_ans and int(i) == question_no:
             is_correct = False
             choice = correct_ans
-        elif correct_ans - 1 not in list_pos and int(i) == question_no and len(list_pos) > 1:
-            # cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
+            amount_correct = 0
+            for j, pos in enumerate(list_pos):
+                if pos == correct_ans[j]:
+                    amount_correct += 1
+            score = Scoring.main_process(len(correct_ans), point_per_clause, type_multiple, amount_correct)
+        elif len(correct_ans) < 1 and list_pos != correct_ans and int(i) == question_no:
             is_correct = False
             choice = correct_ans
-        elif correct_ans - 1 not in list_pos and int(i) == question_no and len(list_pos) < 1:
-            # cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
-            is_correct = False
-            choice = correct_ans
+        # if correct_ans - 1 in list_pos and int(i) == question_no and len(list_pos) == 1:
+        #     # cv2.drawContours(img, [list_answer_choice[list_pos[0]][2]], -1, (0, 255, 0), 2)
+        #     is_correct = True
+        #     choice = correct_ans
+        # elif correct_ans - 1 in list_pos and int(i) == question_no and len(list_pos) > 1:
+        #     # cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
+        #     is_correct = False
+        #     choice = correct_ans
+        # elif correct_ans - 1 not in list_pos and int(i) == question_no and len(list_pos) == 1:
+        #     # cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
+        #     is_correct = False
+        #     choice = correct_ans
+        # elif correct_ans - 1 not in list_pos and int(i) == question_no and len(list_pos) > 1:
+        #     # cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
+        #     is_correct = False
+        #     choice = correct_ans
+        # elif correct_ans - 1 not in list_pos and int(i) == question_no and len(list_pos) < 1:
+        #     # cv2.drawContours(img, [list_answer_choice[correct_ans - 1][2]], -1, (0, 0, 255), 2)
+        #     is_correct = False
+        #     choice = correct_ans
     return {
         'is_correct': is_correct,
-        'ans_choice': choice
+        'ans_choice': choice,
+        'score': score
     }
 
 
@@ -364,9 +390,9 @@ def main_process(form_img, subject_tmp_path, subject_img, std_img, quiz, column,
         score = 0
         for i in range(1, quiz['amount']+1):
             print('question: ' + str(i))
-            result = calulate_score(i, list_choices_bubbled, subject, keys, amount, column, dict_c_form)
+            result = calulate_score(i, list_choices_bubbled, subject, keys, amount, column, dict_c_form, quiz['multiple_choice'])
             if result['correct']:
-                score += 1
+                score += result['score_per_question']
             dict_result[str(i)] = result
         return {
             'is_error': False,
