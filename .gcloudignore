@@ -14,5 +14,7 @@
 .gitignore
 venv
 MainTest.py
+form
+quiz
 
 node_modules

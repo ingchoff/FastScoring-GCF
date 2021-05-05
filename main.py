@@ -359,17 +359,28 @@ def coords(data, context):
                     'stu_status': 'error'
                 }, merge=True)
             os.remove(form_tmp_path)
+
+
+def edit_score(data, context):
+    print('Event type: {}'.format(context.resource))
+    print('{}'.format(data))
+    list_resource = context.resource.split("/")
     if list_resource[5] == 'quizzes':
         quiz_ref = db.collection('quizzes').document(list_resource[6])
-        query_exam_ref = db.collection('exams').where("quiz", "==", quiz_ref)
-        if not data['value']['fields'].get('multiple_choice'):
-            return
-        type_multiple = data['value']['fields']['multiple_choice']['stringValue']
-        print(type_multiple)
-        point_per_clause = data['value']['fields']['point_per_clause']['integerValue']
-        print(point_per_clause)
-        # exam_ref.set({
-        #     'status': 'scoring'
-        # })
-        # Scoring.main_process()
-
+        query_exam_docs = db.collection('exams').where("quiz", "==", quiz_ref).get()
+        for doc in query_exam_docs:
+            exam_ref = db.collection('exams').document(doc.id)
+            exam_data = doc.to_dict()
+            exam_ref.set({
+                'status': 'scoring'
+            }, merge=True)
+            print(exam_data['result'])
+            type_multiple = data['value']['fields']['multiple_choice']['stringValue']
+            print(type_multiple)
+            point_per_clause = data['value']['fields']['point_per_clause']['integerValue']
+            print(point_per_clause)
+            edited_score = Scoring.edit_score(exam_data['result'], type_multiple, point_per_clause)
+            exam_ref.set({
+                'status': 'done',
+                'score': edited_score
+            }, merge=True)
