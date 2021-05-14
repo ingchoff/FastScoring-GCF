@@ -24,25 +24,25 @@ def edit_score(data_result, type_scoring, point):
     for no, data in data_result.items():
         score = 0
         correct_clause = 0
-        if data['correct'] and data['correct_choice'] == data['user_choice'] and len(data['correct_choice']) == 1:
+        if data['correct_choice'] == data['user_choice'] and len(data['correct_choice']) == 1:
             score = int(point)
             data_result[no]['correct'] = int(point)
-        elif not data['correct'] and data['correct_choice'] != data['user_choice'] and len(data['correct_choice']) == 1:
+        elif data['correct_choice'] != data['user_choice'] and len(data['correct_choice']) == 1:
             score = 0
             data_result[no]['correct'] = 0
-        elif not data['correct'] and data['correct_choice'] != data['user_choice'] and len(data['correct_choice']) > 1 and \
+        elif data['correct_choice'] != data['user_choice'] and len(data['correct_choice']) > 1 and \
                 type_scoring == 'all':
             score = 0
             data_result[no]['correct'] = 0
-        elif data['correct'] and data['correct_choice'] == data['user_choice'] and len(data['correct_choice']) > 1 and \
+        elif data['correct_choice'] == data['user_choice'] and len(data['correct_choice']) > 1 and \
                 type_scoring == 'all':
             score = int(point)
             data_result[no]['correct'] = int(point)
-        elif data['correct'] and data['correct_choice'] == data['user_choice'] and len(data['correct_choice']) > 1 and \
+        elif data['correct_choice'] == data['user_choice'] and len(data['correct_choice']) > 1 and \
                 type_scoring == 'average':
             score = int(point)
             data_result[no]['correct'] = int(point)
-        elif not data['correct'] and data['correct_choice'] != data['user_choice'] and len(data['correct_choice']) > 1 and \
+        elif data['correct_choice'] != data['user_choice'] and len(data['correct_choice']) > 1 and \
                 type_scoring == 'average' and len(data['user_choice']) <= len(data['correct_choice']):
             for ans in data['correct_choice']:
                 if ans in data['user_choice']:
@@ -50,11 +50,11 @@ def edit_score(data_result, type_scoring, point):
             weight_point = int(point)/len(data['correct_choice'])
             score = weight_point*correct_clause
             data_result[no]['correct'] = score
-        elif data['correct'] and data['correct_choice'] == data['user_choice'] and len(data['correct_choice']) > 1 and \
+        elif  data['correct_choice'] == data['user_choice'] and len(data['correct_choice']) > 1 and \
                 type_scoring == 'minimum':
             score = int(point)
             data_result[no]['correct'] = score
-        elif not data['correct'] and data['correct_choice'] != data['user_choice'] and len(data['correct_choice']) > 1 and \
+        elif data['correct_choice'] != data['user_choice'] and len(data['correct_choice']) > 1 and \
                 type_scoring == 'minimum' and len(data['user_choice']) <= len(data['correct_choice']):
             for ans in data['correct_choice']:
                 if ans in data['user_choice']:
