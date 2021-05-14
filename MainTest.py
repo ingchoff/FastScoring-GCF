@@ -14,17 +14,17 @@ cred = credentials.Certificate('../FastScoring-ExamGrader/fastscoring-c4742ee722
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 # quiz_ref = db.collection('quizzes').document('Hg5jta781kg8vlyj4tJ1')
-quiz_ref = db.collection('quizzes').document('Wx2yIJFDx4mVwrNMlIjy')
+quiz_ref = db.collection('quizzes').document('TalJQmTondKmhS5m5viP')
 snapshot_quiz = quiz_ref.get()
-form_ref = db.collection('forms').document('GlAJtxOqQ7c8MAeeXCuJ')
+form_ref = db.collection('forms').document('Ix83pdKoPCGC2zhKTpEA')
 snapshot_form = form_ref.get()
 data_quiz = snapshot_quiz.to_dict()
 data_form = snapshot_form.to_dict()
 form_tmp_path = "../FastScoring-ExamGrader/test/fullstd4.jpg"
-for i in range(31, 32):
-    path = "../FastScoring-ExamGrader/test/testbugs/result/" + str(i)
+for i in range(6, 19):
+    path = "../FastScoring-ExamGrader/test/testset/angle/new/15/result/" + str(i)
     os.mkdir(path)
-    subject_tmp_path = "../FastScoring-ExamGrader/test/testbugs/" + str(i) + ".jpg"
+    subject_tmp_path = "../FastScoring-ExamGrader/test/testset/angle/new/15/" + str(i) + ".jpg"
     img_aligned = Orb.main_process(form_tmp_path, subject_tmp_path, data_form['answer_sheet_coords'], data_form['student_coords'], 'answer', 1)
     if not img_aligned['is_error']:
         cv2.imwrite(path + '/2.2aligned_answer.jpg', img_aligned['answer_aligned_img'])
@@ -42,8 +42,9 @@ for i in range(31, 32):
         # result = FindAnswer.main_process(form_tmp_path, img_aligned['answer_aligned_img'], data_quiz, data_form['amount'],
         #                                  data_form['column'], data_form['answer_sheet_coords'], data_form['num_choice'])
         if not result['is_error']:
-            # cv2.imwrite(path + '/6result.jpg', result['img_solve'])
-            print(result['result'])
+            cv2.imwrite(path + '/6result.jpg', result['result_img'])
+            print(result['score'])
+            # print(result['result'])
         else:
             print(result['error_msg'])
     # x_ans = int(data_form['answer_sheet_coords']['x'])

@@ -4,7 +4,7 @@ from exam import Compare
 from exam import MsePaper
 from exam import ImgProcess
 
-GOOD_MATCH_PERCENT = 0.15
+GOOD_MATCH_PERCENT = 0.1
 
 
 def alignImages(im1, im2, type_sift, plus, descriptors1, descriptors2, keypoints1, keypoints2):
@@ -17,7 +17,7 @@ def alignImages(im1, im2, type_sift, plus, descriptors1, descriptors2, keypoints
     # matches = bf.knnMatch(descriptors1, descriptors2, k=2)
 
     # Sort matches by score
-    matches = sorted(matches, key=lambda x: x.distance)
+    matches = sorted(matches, key=lambda x: x.distance, reverse=False)
     # plus_next = (plus * 14)
 
     # Remove not so good matches
@@ -29,14 +29,16 @@ def alignImages(im1, im2, type_sift, plus, descriptors1, descriptors2, keypoints
     #     if m.distance < 0.5 * n.distance:
     #         good_matches.append([m])
     # print(len(good_matches))
+    # imMatches = cv2.drawMatches(im1, keypoints1, im2, keypoints2, matches, None)
+    # cv2.imwrite("match.jpg", imMatches)
 
     # Extract location of good matches
     points1 = np.zeros((len(matches), 2), dtype=np.float32)
     points2 = np.zeros((len(matches), 2), dtype=np.float32)
 
     for i, match in enumerate(matches):
-        points1[i] = keypoints1[match.queryIdx].pt
-        points2[i] = keypoints2[match.trainIdx].pt
+        points1[i, :] = keypoints1[match.queryIdx].pt
+        points2[i, :] = keypoints2[match.trainIdx].pt
 
     # points1 = np.float32([keypoints1[m[0].queryIdx].pt for m in good_matches])
     # points2 = np.float32([keypoints2[m[0].trainIdx].pt for m in good_matches])
@@ -67,25 +69,27 @@ def find_compare(rounds, list_mse_prv, img, img_gray, img_refer, img_refer_gray)
     end_feature = 0
     obj_aligned = {}
     if rounds == 1:
-        start_feature = 1000
-        end_feature = 2500
+        start_feature = 10000
+        end_feature = 25000
     elif rounds == 2:
-        start_feature = 2600
-        end_feature = 5000
+        start_feature = 25000
+        end_feature = 30000
         list_mse = list_mse_prv
     elif rounds == 3:
-        start_feature = 1000
-        end_feature = 5000
+        start_feature = 10000
+        end_feature = 25000
         list_mse = list_mse_prv
     while is_loop:
         # Registered image will be resotred in imReg.
         # The estimated homography will be stored in h.
         print(start_feature + increase)
-        orb = cv2.ORB_create(start_feature + increase)
+        orb = cv2.ORB_create(nfeatures=start_feature + increase, scoreType=cv2.ORB_FAST_SCORE)
         keypoints1, descriptors1 = orb.detectAndCompute(img_gray, None)
         keypoints2, descriptors2 = orb.detectAndCompute(img_refer_gray, None)
         result_aligned = alignImages(img, img_refer, 'std', increase, descriptors1, descriptors2, keypoints1,
                                      keypoints2)
+        # kp = cv2.drawKeypoints(img_gray, keypoints1, img)
+        # cv2.imwrite('kp.jpg', kp)
         if result_aligned['is_error']:
             print(result_aligned['is_error'])
         else:
@@ -99,7 +103,7 @@ def find_compare(rounds, list_mse_prv, img, img_gray, img_refer, img_refer_gray)
                 if (start_feature + increase) == end_feature:
                     is_loop = False
                     increase = 0
-                increase += 100
+                increase += 500
     obj_aligned["list_mse"] = list_mse
     print(obj_aligned["list_mse"])
     return obj_aligned

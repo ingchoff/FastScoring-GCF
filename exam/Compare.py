@@ -40,7 +40,7 @@ def compare_images(imageA, imageB, feature, rounds):
         values_compare["feature"] = feature
     elif rounds == 3:
         check_circle = ImgProcess.detect_circle(imageB, 500, 'exam')
-        if m <= 10500 and s >= 0.52 and len(check_circle) >= 500:
+        if m <= 10500 and s >= 0.50 and len(check_circle) >= 500:
             is_pass = True
         else:
             is_pass = False
