@@ -1,17 +1,27 @@
 def main_process(list_correct, point, type_scoring, list_pos):
     score = 0
     amount_correct = 0
-    if len(list_pos) == 1:
+    if len(list_pos) == 1 and list_correct == list_pos:
+        # print('1')
         score = point
-    elif len(list_pos) > 1 and type_scoring == 'all':
+    elif len(list_pos) > 1 and type_scoring == 'all' and list_correct == list_pos:
+        # print('2')
         score = point
-    elif len(list_pos) > 1 and type_scoring == 'average':
+    elif len(list_pos) > 1 and type_scoring == 'average' and list_correct == list_pos:
+        # print('3')
+        score = point
+    elif len(list_pos) > 1 and type_scoring == 'average' and list_correct != list_pos:
+        # print('4')
         for j, pos in enumerate(list_correct):
             if len(list_pos) != 0 and pos in list_pos:
                 amount_correct += 1
         weight_per_choices = (point/len(list_correct))
         score = weight_per_choices*amount_correct
-    elif len(list_pos) > 1 and type_scoring == 'minimum':
+    elif len(list_pos) > 1 and type_scoring == 'minimum' and list_correct == list_pos:
+        # print('5')
+        score = point
+    elif len(list_pos) > 1 and type_scoring == 'minimum' and list_correct != list_pos:
+        # print('6')
         for j, pos in enumerate(list_correct):
             if len(list_pos) != 0 and pos in list_pos:
                 score = point
@@ -50,7 +60,7 @@ def edit_score(data_result, type_scoring, point):
             weight_point = int(point)/len(data['correct_choice'])
             score = weight_point*correct_clause
             data_result[no]['correct'] = score
-        elif  data['correct_choice'] == data['user_choice'] and len(data['correct_choice']) > 1 and \
+        elif data['correct_choice'] == data['user_choice'] and len(data['correct_choice']) > 1 and \
                 type_scoring == 'minimum':
             score = int(point)
             data_result[no]['correct'] = score

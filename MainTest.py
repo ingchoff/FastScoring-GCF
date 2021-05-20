@@ -21,10 +21,10 @@ snapshot_form = form_ref.get()
 data_quiz = snapshot_quiz.to_dict()
 data_form = snapshot_form.to_dict()
 form_tmp_path = "../FastScoring-ExamGrader/test/fullstd4.jpg"
-for i in range(6, 19):
-    path = "../FastScoring-ExamGrader/test/testset/angle/new/15/result/" + str(i)
+for i in range(8, 9):
+    path = "../FastScoring-ExamGrader/test/testset/angle/new/0/result/" + str(i)
     os.mkdir(path)
-    subject_tmp_path = "../FastScoring-ExamGrader/test/testset/angle/new/15/" + str(i) + ".jpg"
+    subject_tmp_path = "../FastScoring-ExamGrader/test/testset/angle/new/0/" + str(i) + ".jpg"
     img_aligned = Orb.main_process(form_tmp_path, subject_tmp_path, data_form['answer_sheet_coords'], data_form['student_coords'], 'answer', 1)
     if not img_aligned['is_error']:
         cv2.imwrite(path + '/2.2aligned_answer.jpg', img_aligned['answer_aligned_img'])
@@ -43,7 +43,7 @@ for i in range(6, 19):
         #                                  data_form['column'], data_form['answer_sheet_coords'], data_form['num_choice'])
         if not result['is_error']:
             cv2.imwrite(path + '/6result.jpg', result['result_img'])
-            print(result['score'])
+            # print(result['score'])
             # print(result['result'])
         else:
             print(result['error_msg'])

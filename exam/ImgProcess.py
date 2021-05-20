@@ -43,9 +43,9 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
             chosen_choice = bubble
             chosen_pos = pos
     list_selected.append(chosen_pos)
-    print(list_bubble)
-    print(list_diff)
-    print(list_selected)
+    # print(list_bubble)
+    # print(list_diff)
+    # print(list_selected)
     for pos, diff in enumerate(list_diff):
         # กรณีที่ฝน 2 ช้อย
         if diff <= 60 and pos not in list_selected:
@@ -53,7 +53,7 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
         # กรณีถ้าไม่ได้ฝนเลยต้องทำใหลบ
         elif diff > 60 and pos in list_selected:
             percent = (list_bubble[pos] / avg) * 100
-            print(percent)
+            # print(percent)
             if percent <= 45:
                 list_selected.remove(pos)
                 chosen_pos = -1
@@ -67,7 +67,7 @@ def calulate_score(questions_no, answersheet, subject_img, answer_keys, amount, 
                 list_selected.remove(pos)
                 chosen_pos = -1
 
-    print(list_selected)
+    # print(list_selected)
     correct = draw_answer(questions_no, answer_keys, sorted(list_selected), point_per_clause, type_multiple, subject_img, answer_choice)
     return {
         'user_choice': [x+1 for x in sorted(list_selected)],
@@ -82,24 +82,29 @@ def draw_answer(question_no, keys, list_pos, point_per_clause, type_multiple, im
     is_correct = False
     choice = []
     score = 0
+    # print('question:' + str(question_no))
     for i, correct_ans in sorted(keys.items()):
         if len(correct_ans) == 1 and list_pos == correct_ans and int(i) == question_no:
+            # print('1')
             is_correct = True
             choice = correct_ans
             score = Scoring.main_process(correct_ans, point_per_clause, type_multiple, list_pos)
             # cv2.drawContours(img, [list_answer_choice[list_pos[0] - 1][2]], -1, (0, 255, 0), 2)
         elif len(correct_ans) > 1 and list_pos == correct_ans and int(i) == question_no:
+            # print('2')
             is_correct = True
             choice = correct_ans
             score = Scoring.main_process(correct_ans, point_per_clause, type_multiple, list_pos)
             # for k in list_pos:
             #     cv2.drawContours(img, [list_answer_choice[k - 1][2]], -1, (0, 255, 0), 2)
         elif len(correct_ans) == 1 and list_pos != correct_ans and int(i) == question_no:
+            # print('3')
             is_correct = False
             choice = correct_ans
             # print(list_pos)
             # cv2.drawContours(img, [list_answer_choice[correct_ans[0] - 1][2]], -1, (0, 0, 255), 2)
         elif len(correct_ans) > 1 and list_pos != correct_ans and int(i) == question_no:
+            # print('4')
             is_correct = False
             choice = correct_ans
             # amount_correct = 0
@@ -112,8 +117,10 @@ def draw_answer(question_no, keys, list_pos, point_per_clause, type_multiple, im
                 #     cv2.drawContours(img, [list_answer_choice[pos - 1][2]], -1, (0, 0, 255), 2)
             score = Scoring.main_process(correct_ans, point_per_clause, type_multiple, list_pos)
         elif len(correct_ans) < 1 and list_pos != correct_ans and int(i) == question_no:
+            # print('5')
             is_correct = False
             choice = correct_ans
+    # print('score: ' + str(score))
     return {
         'is_correct': is_correct,
         'ans_choice': choice,
@@ -171,7 +178,7 @@ def mask_std(std_cnts, img_std_id, stu_col):
                 col = stu_col
             bubbled = (total, col, pos_choice)
             list_bubbled.append(bubbled)
-    print(len(list_bubbled))
+    # print(len(list_bubbled))
     return list_bubbled
 
 
@@ -210,7 +217,7 @@ def find_std_id(list_bubbled, list_form, stu_col):
                 list_selected.append(pos)
             elif diff > 60 and pos in list_selected:
                 percent = (list_bubble[pos] / avg_c) * 100
-                print(percent)
+                # print(percent)
                 if percent < 45:
                     list_selected.remove(pos)
                 if percent >= 45 and pos != 9 and abs(list_diff[pos] - list_diff[pos - 1]) <= 42 and abs(
@@ -377,7 +384,7 @@ def main_process(form_img, subject_tmp_path, subject_img, std_img, quiz, column,
         dict_result = {}
         score = 0
         for i in range(1, quiz['amount']+1):
-            print('question: ' + str(i))
+            # print('question: ' + str(i))
             result = calulate_score(i, list_choices_bubbled, subject, keys, amount, column, dict_c_form, quiz['point_per_clause'], quiz['multiple_choice'])
             if result['correct']:
                 score += result['correct']
