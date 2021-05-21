@@ -15,5 +15,5 @@ def main(papers_values):
         return paper
     papers = list(map(turn_mse_to_percent, papers_values))
     papers = list(map(square_dist, papers))
-    print('result:' + str(papers))
+    # print('result:' + str(papers))
     return max(papers, key=lambda x: x["result"])

@@ -17,7 +17,7 @@ def mse(imageA, imageB):
     return err
 
 
-def compare_images(imageA, imageB, feature, rounds):
+def compare_images(imageA, imageB, feature, rounds, path):
     # compute the mean squared error and structural similarity
     # index for the images
     is_pass = False
@@ -25,32 +25,48 @@ def compare_images(imageA, imageB, feature, rounds):
                                    cv2.THRESH_BINARY_INV, 71, 2 | cv2.THRESH_OTSU)
     kernel = np.ones((1, 1), np.uint8)
     camera = cv2.erode(camera, kernel, iterations=1)
-    camera = cv2.bitwise_not(camera)
-    m = mse(imageA, camera)
-    s = ssim(imageA, camera)
+    # camera = cv2.bitwise_not(camera)
+    # cv2.imwrite(path + '/' + 'imageA1.jpg', imageA)
+    imageA = cv2.adaptiveThreshold(imageA, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+                                   cv2.THRESH_BINARY_INV, 71, 2 | cv2.THRESH_OTSU)
+    # cv2.imwrite(path + '/' + 'imageA2.jpg', imageA)
+    # cv2.imwrite(path + '/' + 'camera2.jpg', camera)
+    diff = cv2.bitwise_and(imageA, camera)
+    # diff = cv2.bitwise_not(diff)
+    m = mse(imageA, diff)
+    s = ssim(imageA, diff)
     values_compare = {}
     print("MSE: %.2f, SSIM: %.2f" % (m, s))
     if rounds == 1:
         values_compare["MSE"] = m
         values_compare["SSIM"] = s
         values_compare["feature"] = feature
+        # cv2.imwrite(path + '/' + 'diff.jpg', diff)
     if rounds == 2:
         values_compare["MSE"] = m
         values_compare["SSIM"] = s
         values_compare["feature"] = feature
+        # cv2.imwrite(path + '/' + 'diff.jpg', diff)
+    # is_pass = True
     elif rounds == 3:
         check_circle = ImgProcess.detect_circle(imageB, 500, 'exam')
-        if m <= 10500 and s >= 0.50 and len(check_circle) >= 500:
+        values_compare["MSE"] = m
+        values_compare["SSIM"] = s
+        values_compare["feature"] = feature
+        if s >= 0.8 and len(check_circle) >= 500:
+            # cv2.imwrite(path + '/' + 'diff.jpg', diff)
             is_pass = True
         else:
+            # cv2.imwrite(path + '/' + 'diff.jpg', diff)
             is_pass = False
+    print(values_compare)
     return {
         "aligned_value": values_compare,
         "is_aligned": is_pass
     }
 
 
-def main_process(aligned_img, form_img, max_feature, rounds):
+def main_process(aligned_img, form_img, max_feature, rounds, path):
     # load the images -- the original, the original + contrast,
     # and the original + photoshop
     original = form_img
@@ -58,8 +74,8 @@ def main_process(aligned_img, form_img, max_feature, rounds):
     # convert the images to grayscale
     original = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
     camera = cv2.cvtColor(camera, cv2.COLOR_BGR2GRAY)
-    camera = cv2.medianBlur(camera, 3)
-
+    camera = cv2.medianBlur(camera, 1)
+    # cv2.imshow('camera', camera)
     # compare two images
-    is_aligned = compare_images(original, camera, max_feature, rounds)
+    is_aligned = compare_images(original, camera, max_feature, rounds, path)
     return is_aligned

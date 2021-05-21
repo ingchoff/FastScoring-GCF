@@ -61,23 +61,24 @@ def alignImages(im1, im2, type_sift, plus, descriptors1, descriptors2, keypoints
         }
 
 
-def find_compare(rounds, list_mse_prv, img, img_gray, img_refer, img_refer_gray):
+def find_compare(rounds, list_mse_prv, img, img_gray, img_refer, img_refer_gray, answer_coords, stu_coords, path):
     is_loop = True
     increase = 0
     list_mse = []
+    # list_mse_stu = []
     start_feature = 0
     end_feature = 0
     obj_aligned = {}
     if rounds == 1:
         start_feature = 10000
-        end_feature = 25000
+        end_feature = 20000
     elif rounds == 2:
-        start_feature = 25000
-        end_feature = 30000
+        start_feature = 20000
+        end_feature = 25000
         list_mse = list_mse_prv
     elif rounds == 3:
         start_feature = 10000
-        end_feature = 25000
+        end_feature = 20000
         list_mse = list_mse_prv
     while is_loop:
         # Registered image will be resotred in imReg.
@@ -93,14 +94,28 @@ def find_compare(rounds, list_mse_prv, img, img_gray, img_refer, img_refer_gray)
         if result_aligned['is_error']:
             print(result_aligned['is_error'])
         else:
-            is_aligned_pass = Compare.main_process(result_aligned['aligned_img'], img_refer, start_feature+increase, rounds)
+            x_ans = int(answer_coords['x'])
+            y_ans = int(answer_coords['y'])
+            w_ans = int(answer_coords['width'])
+            h_ans = int(answer_coords['height'])
+            # x_stu = int(stu_coords['x'])
+            # y_stu = int(stu_coords['y'])
+            # w_stu = int(stu_coords['width'])
+            # h_stu = int(stu_coords['height'])
+            # aligned_stu_crop = result_aligned['aligned_img'][y_stu:y_stu + h_stu, x_stu:x_stu + w_stu]
+            # img_refer_stu_crop = img_refer[y_stu:y_stu + h_stu, x_stu:x_stu + w_stu]
+            aligned_crop = result_aligned['aligned_img'][y_ans:y_ans + h_ans, x_ans:x_ans + w_ans]
+            img_refer_crop = img_refer[y_ans:y_ans + h_ans, x_ans:x_ans + w_ans]
+            is_aligned_pass = Compare.main_process(result_aligned['aligned_img'], img_refer, start_feature+increase, rounds, path, )
+            # is_aligned_stu_pass = Compare.main_process(aligned_stu_crop, img_refer_stu_crop, start_feature + increase, rounds, path)
             if is_aligned_pass["is_aligned"]:
                 obj_aligned["aligned_img"] = result_aligned['aligned_img']
+                # cv2.imwrite(path + '/' + str(start_feature + increase) + 'mse' + str(is_aligned_pass['aligned_value']['MSE']) + 'ssim' + str(is_aligned_pass['aligned_value']['SSIM']) + '-selected.jpg', result_aligned['aligned_img'])
                 obj_aligned["list_mse"] = list_mse
                 is_loop = False
             else:
                 list_mse.append(is_aligned_pass["aligned_value"])
-                cv2.imwrite('Aligned/' + str(start_feature + increase) + '.jpg', result_aligned['aligned_img'])
+                # cv2.imwrite(path + '/' + str(start_feature + increase) + 'mse' + str(is_aligned_pass['aligned_value']['MSE']) + 'ssim' + str(is_aligned_pass['aligned_value']['SSIM']) + '.jpg', result_aligned['aligned_img'])
                 if (start_feature + increase) == end_feature:
                     is_loop = False
                     increase = 0
@@ -110,7 +125,7 @@ def find_compare(rounds, list_mse_prv, img, img_gray, img_refer, img_refer_gray)
     return obj_aligned
 
 
-def main_process(img_form, img_subject, answer_coords, stu_coords, type_align, option_round):
+def main_process(img_form, img_subject, answer_coords, stu_coords, type_align, option_round, path_aligned):
     imReference = cv2.imread(img_form, cv2.IMREAD_COLOR)
     # Read image to be aligned
     im = cv2.imread(img_subject, cv2.IMREAD_COLOR)
@@ -119,7 +134,7 @@ def main_process(img_form, img_subject, answer_coords, stu_coords, type_align, o
     im1Gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
     im2Gray = cv2.cvtColor(imReference, cv2.COLOR_BGR2GRAY)
     if option_round == 1:
-        obj_aligned_final = find_compare(3, [], im, im1Gray, imReference, im2Gray)
+        obj_aligned_final = find_compare(3, [], im, im1Gray, imReference, im2Gray, answer_coords, stu_coords, path_aligned)
         x_ans = int(answer_coords['x'])
         y_ans = int(answer_coords['y'])
         w_ans = int(answer_coords['width'])
@@ -137,8 +152,8 @@ def main_process(img_form, img_subject, answer_coords, stu_coords, type_align, o
                 'is_error': False
             }
         else:
-            obj_aligned = find_compare(1, [], im, im1Gray, imReference, im2Gray)
-            result_selected = MsePaper.main(obj_aligned["list_mse"])
+            # obj_aligned = find_compare(1, [], im, im1Gray, imReference, im2Gray, answer_coords, path_aligned)
+            result_selected = MsePaper.main(obj_aligned_final["list_mse"])
             print("feature selected:" + str(result_selected["feature"]))
             orb = cv2.ORB_create(nfeatures=result_selected["feature"], scoreType=cv2.ORB_FAST_SCORE)
             keypoints1, descriptors1 = orb.detectAndCompute(im1Gray, None)
@@ -164,13 +179,16 @@ def main_process(img_form, img_subject, answer_coords, stu_coords, type_align, o
                 stu_crop_img = result_aligned['aligned_img'][y_stu:y_stu + h_stu, x_stu:x_stu + w_stu]
                 check_circle = ImgProcess.detect_circle(answer_crop_img_gray, 500, 'exam')
                 if len(check_circle) >= 500:
+                    # cv2.imwrite(path_aligned + '/' + str(result_selected["feature"]) + 'mse' + str(
+                    #     result_selected["MSE"]) + 'ssim' + str(result_selected["SSIM"]) + '-selected.jpg',
+                    #             result_aligned['aligned_img'])
                     return {
                         'answer_aligned_img': answer_crop_img,
                         'stu_aligned_img': stu_crop_img,
                         'is_error': False
                     }
                 else:
-                    obj_aligned_final = find_compare(2, obj_aligned["list_mse"], im, im1Gray, imReference, im2Gray)
+                    obj_aligned_final = find_compare(2, obj_aligned_final["list_mse"], im, im1Gray, imReference, im2Gray, answer_coords, stu_coords, path_aligned)
                     result_selected = MsePaper.main(obj_aligned_final["list_mse"])
                     print("feature selected:" + str(result_selected["feature"]))
                     orb = cv2.ORB_create(nfeatures=result_selected["feature"], scoreType=cv2.ORB_FAST_SCORE)
@@ -192,6 +210,7 @@ def main_process(img_form, img_subject, answer_coords, stu_coords, type_align, o
                         y_stu = int(stu_coords['y'])
                         w_stu = int(stu_coords['width'])
                         h_stu = int(stu_coords['height'])
+                        # cv2.imwrite(path_aligned + '/' + str(result_selected["feature"]) + 'mse' + str(result_selected["MSE"]) + 'ssim' + str(result_selected["SSIM"]) + '-selected.jpg', result_aligned['aligned_img'])
                         answer_crop_img = result_aligned['aligned_img'][y_ans:y_ans + h_ans, x_ans:x_ans + w_ans]
                         stu_crop_img = result_aligned['aligned_img'][y_stu:y_stu + h_stu, x_stu:x_stu + w_stu]
                         return {
@@ -200,7 +219,7 @@ def main_process(img_form, img_subject, answer_coords, stu_coords, type_align, o
                             'is_error': False
                         }
     elif option_round == 2:
-        obj_aligned = find_compare(1, [], im, im1Gray, imReference, im2Gray)
+        obj_aligned = find_compare(1, [], im, im1Gray, imReference, im2Gray, answer_coords, path_aligned, stu_coords)
         result_selected = MsePaper.main(obj_aligned["list_mse"])
         print("feature selected:" + str(result_selected["feature"]))
         orb = cv2.ORB_create(nfeatures=result_selected["feature"], scoreType=cv2.ORB_FAST_SCORE)

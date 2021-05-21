@@ -217,7 +217,7 @@ def find_std_id(list_bubbled, list_form, stu_col):
                 list_selected.append(pos)
             elif diff > 60 and pos in list_selected:
                 percent = (list_bubble[pos] / avg_c) * 100
-                # print(percent)
+                print(percent)
                 if percent < 45:
                     list_selected.remove(pos)
                 if percent >= 45 and pos != 9 and abs(list_diff[pos] - list_diff[pos - 1]) <= 42 and abs(
@@ -338,7 +338,7 @@ def main_process(form_img, subject_tmp_path, subject_img, std_img, quiz, column,
             std_id = ''.join(map(str, list_std_id))
             print(std_id)
         elif 1 <= stu_col - len(list_std_id) <= 7:
-            img_aligned = Orb.main_process(form_img, subject_tmp_path, answer_coords, stu_coords, 'answer', 2)
+            img_aligned = Orb.main_process(form_img, subject_tmp_path, answer_coords, stu_coords, 'answer', 2, '')
             std_image = img_aligned['stu_aligned_img']
             subject = img_aligned['answer_aligned_img']
             std_image_gray = cv2.cvtColor(std_image, cv2.COLOR_BGR2GRAY)
