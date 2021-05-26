@@ -29,8 +29,8 @@ def alignImages(im1, im2, type_sift, plus, descriptors1, descriptors2, keypoints
     #     if m.distance < 0.5 * n.distance:
     #         good_matches.append([m])
     # print(len(good_matches))
-    # imMatches = cv2.drawMatches(im1, keypoints1, im2, keypoints2, matches, None)
-    # cv2.imwrite("match.jpg", imMatches)
+    imMatches = cv2.drawMatches(im1, keypoints1, im2, keypoints2, matches, None)
+    cv2.imwrite("match.jpg", imMatches)
 
     # Extract location of good matches
     points1 = np.zeros((len(matches), 2), dtype=np.float32)
@@ -71,14 +71,14 @@ def find_compare(rounds, list_mse_prv, img, img_gray, img_refer, img_refer_gray,
     obj_aligned = {}
     if rounds == 1:
         start_feature = 10000
-        end_feature = 20000
+        end_feature = 18000
     elif rounds == 2:
         start_feature = 20000
         end_feature = 25000
         list_mse = list_mse_prv
     elif rounds == 3:
         start_feature = 10000
-        end_feature = 20000
+        end_feature = 18000
         list_mse = list_mse_prv
     while is_loop:
         # Registered image will be resotred in imReg.
@@ -110,12 +110,12 @@ def find_compare(rounds, list_mse_prv, img, img_gray, img_refer, img_refer_gray,
             # is_aligned_stu_pass = Compare.main_process(aligned_stu_crop, img_refer_stu_crop, start_feature + increase, rounds, path)
             if is_aligned_pass["is_aligned"]:
                 obj_aligned["aligned_img"] = result_aligned['aligned_img']
-                # cv2.imwrite(path + '/' + str(start_feature + increase) + 'mse' + str(is_aligned_pass['aligned_value']['MSE']) + 'ssim' + str(is_aligned_pass['aligned_value']['SSIM']) + '-selected.jpg', result_aligned['aligned_img'])
+                cv2.imwrite(path + '/' + str(start_feature + increase) + 'mse' + str(is_aligned_pass['aligned_value']['MSE']) + 'ssim' + str(is_aligned_pass['aligned_value']['SSIM']) + '-selected.jpg', result_aligned['aligned_img'])
                 obj_aligned["list_mse"] = list_mse
                 is_loop = False
             else:
                 list_mse.append(is_aligned_pass["aligned_value"])
-                # cv2.imwrite(path + '/' + str(start_feature + increase) + 'mse' + str(is_aligned_pass['aligned_value']['MSE']) + 'ssim' + str(is_aligned_pass['aligned_value']['SSIM']) + '.jpg', result_aligned['aligned_img'])
+                cv2.imwrite(path + '/' + str(start_feature + increase) + 'mse' + str(is_aligned_pass['aligned_value']['MSE']) + 'ssim' + str(is_aligned_pass['aligned_value']['SSIM']) + '.jpg', result_aligned['aligned_img'])
                 if (start_feature + increase) == end_feature:
                     is_loop = False
                     increase = 0
@@ -179,9 +179,9 @@ def main_process(img_form, img_subject, answer_coords, stu_coords, type_align, o
                 stu_crop_img = result_aligned['aligned_img'][y_stu:y_stu + h_stu, x_stu:x_stu + w_stu]
                 check_circle = ImgProcess.detect_circle(answer_crop_img_gray, 500, 'exam')
                 if len(check_circle) >= 500:
-                    # cv2.imwrite(path_aligned + '/' + str(result_selected["feature"]) + 'mse' + str(
-                    #     result_selected["MSE"]) + 'ssim' + str(result_selected["SSIM"]) + '-selected.jpg',
-                    #             result_aligned['aligned_img'])
+                    cv2.imwrite(path_aligned + '/' + str(result_selected["feature"]) + 'mse' + str(
+                        result_selected["MSE"]) + 'ssim' + str(result_selected["SSIM"]) + '-selected.jpg',
+                                result_aligned['aligned_img'])
                     return {
                         'answer_aligned_img': answer_crop_img,
                         'stu_aligned_img': stu_crop_img,
@@ -210,7 +210,7 @@ def main_process(img_form, img_subject, answer_coords, stu_coords, type_align, o
                         y_stu = int(stu_coords['y'])
                         w_stu = int(stu_coords['width'])
                         h_stu = int(stu_coords['height'])
-                        # cv2.imwrite(path_aligned + '/' + str(result_selected["feature"]) + 'mse' + str(result_selected["MSE"]) + 'ssim' + str(result_selected["SSIM"]) + '-selected.jpg', result_aligned['aligned_img'])
+                        cv2.imwrite(path_aligned + '/' + str(result_selected["feature"]) + 'mse' + str(result_selected["MSE"]) + 'ssim' + str(result_selected["SSIM"]) + '-selected.jpg', result_aligned['aligned_img'])
                         answer_crop_img = result_aligned['aligned_img'][y_ans:y_ans + h_ans, x_ans:x_ans + w_ans]
                         stu_crop_img = result_aligned['aligned_img'][y_stu:y_stu + h_stu, x_stu:x_stu + w_stu]
                         return {

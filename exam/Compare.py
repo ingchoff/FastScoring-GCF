@@ -26,11 +26,11 @@ def compare_images(imageA, imageB, feature, rounds, path):
     kernel = np.ones((1, 1), np.uint8)
     camera = cv2.erode(camera, kernel, iterations=1)
     # camera = cv2.bitwise_not(camera)
-    # cv2.imwrite(path + '/' + 'imageA1.jpg', imageA)
+    cv2.imwrite(path + '/' + 'imageA1.jpg', imageA)
     imageA = cv2.adaptiveThreshold(imageA, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
                                    cv2.THRESH_BINARY_INV, 71, 2 | cv2.THRESH_OTSU)
-    # cv2.imwrite(path + '/' + 'imageA2.jpg', imageA)
-    # cv2.imwrite(path + '/' + 'camera2.jpg', camera)
+    cv2.imwrite(path + '/' + 'imageA2.jpg', imageA)
+    cv2.imwrite(path + '/' + 'camera2.jpg', camera)
     diff = cv2.bitwise_and(imageA, camera)
     # diff = cv2.bitwise_not(diff)
     m = mse(imageA, diff)
@@ -41,12 +41,12 @@ def compare_images(imageA, imageB, feature, rounds, path):
         values_compare["MSE"] = m
         values_compare["SSIM"] = s
         values_compare["feature"] = feature
-        # cv2.imwrite(path + '/' + 'diff.jpg', diff)
+        cv2.imwrite(path + '/' + 'diff.jpg', diff)
     if rounds == 2:
         values_compare["MSE"] = m
         values_compare["SSIM"] = s
         values_compare["feature"] = feature
-        # cv2.imwrite(path + '/' + 'diff.jpg', diff)
+        cv2.imwrite(path + '/' + 'diff.jpg', diff)
     # is_pass = True
     elif rounds == 3:
         check_circle = ImgProcess.detect_circle(imageB, 500, 'exam')
@@ -54,10 +54,10 @@ def compare_images(imageA, imageB, feature, rounds, path):
         values_compare["SSIM"] = s
         values_compare["feature"] = feature
         if s >= 0.8 and len(check_circle) >= 500:
-            # cv2.imwrite(path + '/' + 'diff.jpg', diff)
+            cv2.imwrite(path + '/' + 'diff.jpg', diff)
             is_pass = True
         else:
-            # cv2.imwrite(path + '/' + 'diff.jpg', diff)
+            cv2.imwrite(path + '/' + 'diff.jpg', diff)
             is_pass = False
     print(values_compare)
     return {
