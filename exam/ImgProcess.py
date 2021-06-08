@@ -244,10 +244,10 @@ def subtract_img(list_question_cnts, subject_gray, form_img, type_img):
     subject_gray_blurred = cv2.GaussianBlur(subject_gray, (5, 5), 0)
     th1 = cv2.adaptiveThreshold(subject_gray_blurred, 255, cv2.ADAPTIVE_THRESH_GAUSSIAN_C, cv2.THRESH_BINARY_INV, value,
                                 2 | cv2.THRESH_OTSU)
-    cv2.imwrite('3new_marker.jpg', new_marker)
-    cv2.imwrite('3answer-threshold.jpg', th1)
+    # cv2.imwrite('3new_marker.jpg', new_marker)
+    # cv2.imwrite('3answer-threshold.jpg', th1)
     new_sub = cv2.bitwise_and(new_marker_gray, th1)
-    cv2.imwrite('3answer-subtract.jpg', new_sub)
+    # cv2.imwrite('3answer-subtract.jpg', new_sub)
     return {
         'new_sub': new_sub,
         'new_marker_gray': new_marker_gray
@@ -298,12 +298,12 @@ def mask_choices_bubbled(choice_contours, bound_img, col):
             # "bubble" for the question
             mask = np.zeros(bound_img.shape, dtype="uint8")
             ex1 = cv2.drawContours(mask, [c], -1, 255, -1)
-            cv2.imwrite('ex_form' + str(i + j + 1) + '.jpg', mask)
+            # cv2.imwrite('ex_form' + str(i + j + 1) + '.jpg', mask)
             # apply the mask to the thresholded image, then
             # count the number of non-zero pixels in the
             # bubble area
             mask = cv2.bitwise_or(bound_img, bound_img, mask=mask)
-            cv2.imwrite('ex' + str(i + j + 1) + '.jpg', mask)
+            # cv2.imwrite('ex' + str(i + j + 1) + '.jpg', mask)
             total = cv2.countNonZero(mask)
             # if the current total has a larger number of total
             # non-zero pixels, then we are examining the currently
@@ -375,7 +375,7 @@ def main_process(form_img, subject_tmp_path, subject_img, std_img, quiz, column,
         circle_choices = detect_circle(subject_gray, amount * num_choice, 'answer')
         new_subject_image = subtract_img(questionCnts, subject_gray, answer_form, 'answer')
         boundImg = cv2.drawContours(new_subject_image['new_sub'].copy(), questionCnts, -1, (255, 255, 255), 1)
-        cv2.imwrite('4boundImg.jpg', boundImg)
+        # cv2.imwrite('4boundImg.jpg', boundImg)
         choicesCnts = find_circle_contour(boundImg, amount*num_choice)
         list_choices_bubbled = mask_choices_bubbled(choicesCnts, boundImg, column)
         # dict_c_form = mask_choices_bubbled(questionCnts, new_subject_image['new_marker_gray'], column)

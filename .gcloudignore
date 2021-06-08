@@ -14,5 +14,6 @@
 .gitignore
 venv
 MainTest.py
+.idea
 
 node_modules
